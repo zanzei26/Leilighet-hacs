@@ -370,8 +370,8 @@ async def test_data_for_sensorer_med_hittil_og_estimat(hass, oppsett):
     assert d["utestaaende"] == 304.25
     assert d["antall_utestaaende"] == 1
     assert d["siste"]["id"] == "2026-10"
-    assert d["kwh_hittil"] == 30.25
-    assert d["snitt_hittil"] == 1.5 and d["kostnad_hittil"] == 40.0
+    assert d["kwh_hittil"] == 30.3  # fra måleren (30,25 avrundes først)
+    assert d["snitt_hittil"] == 1.5 and d["kostnad_hittil"] == 45.45  # 30,3 × 1,5
     assert d["estimat_kwh"] == pytest.approx(285.48)  # 234,0 × 1,22
     assert d["estimat_kr"] == 371.18  # × forrige snittpris 1,3002
     assert d["effekt_w"] == 850.0
@@ -405,7 +405,7 @@ async def test_siden_skrives_hver_time_med_hittil_tall(hass, oppsett):
                 utility="30.25")  # fmt: skip
     await o.coordinator.async_refresh()
     html = _side(o)
-    assert "30,3 kWh" in html and "1,5000" in html and "40,00 kr" in html
+    assert "30,3 kWh" in html and "1,5000" in html and "45,45 kr" in html
     assert "20.11.2026 12:00" in html
     o.freezer.tick(timedelta(hours=1))
     await o.coordinator.async_refresh()

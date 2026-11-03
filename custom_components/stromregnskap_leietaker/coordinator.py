@@ -16,10 +16,11 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .calc import Grenser, auto_status, forrige_periode_id
+from .calc import Grenser, auto_status, beregn_belop, forrige_periode_id, maaler_forbruk
 from .const import (
     CONF_ADRESSE,
     CONF_ENDRING_MAKS,
+    CONF_ENT_IMPORT,
     CONF_ENT_REGNSKAP,
     CONF_FORFALLSDAG,
     CONF_INNFLYTTET,
@@ -46,6 +47,7 @@ from .filnavn import REGNSKAPSNAVN, fakturanavn
 from .generering import GenereringMixin, ManglerData
 from .handlinger import HandlingerMixin
 from .kilder import Kilder, bygg_data
+from .live import LiveMixin
 from .maaler import MaalerMixin
 from .page import render_side
 from .snapshot import SnapshotMixin
@@ -64,6 +66,7 @@ class StromregnskapCoordinator(
     MaalerMixin,
     SnapshotMixin,
     DatagrunnlagMixin,
+    LiveMixin,
     DataUpdateCoordinator[dict[str, Any]],
 ):
     """Oppdateres hver time. Lager oppgjør i kjørevinduet og holder siden à jour."""
@@ -229,6 +232,18 @@ class StromregnskapCoordinator(
         data["siste_faktura_pdf_url"] = (
             bygg_pdf_url(self.hass, slug, fakturanavn(siste["id"])) if publisert and siste else None
         )
+        # «hittil» regnes som oppgjøret: målerstand nå minus målerstand ved månedsskiftet
+        maaler = maaler_forbruk(
+            self._lagret_stand(naa.date().replace(day=1)),
+            self.kilder.float_tilstand(self.cfg[CONF_ENT_IMPORT]),
+        )
+        if maaler.kwh is not None:
+            data["kwh_hittil"] = maaler.kwh
+            if data["snitt_hittil"] is not None:
+                data["kostnad_hittil"] = beregn_belop(maaler.kwh, data["snitt_hittil"])
+            data["hittil_kilde"] = "maaler"
+        else:
+            data["hittil_kilde"] = "utility_meter"  # reserve: utility_meter og regnskapssensoren
         data["datagrunnlag"] = self.vurder_datagrunnlag(naa)
         data["siste_bilde"] = (self.lager.data["snapshots"].get(mnd) or {}).get("tid")
         data["siste_sikkerhetskopi"] = self.lager.siste_kopi
@@ -236,10 +251,7 @@ class StromregnskapCoordinator(
         data["maalerstander"] = {dato: rad["stand"] for dato, rad in avlesninger}
         return data
 
-    async def _skriv_side(self, naa: datetime, data: dict[str, Any] | None = None) -> None:
-        if not self.cfg.get(CONF_PUBLISER_SIDE):
-            return
-        data = data or self._bygg_data(naa)
+    def _side_ctx(self, naa: datetime, data: dict[str, Any]) -> dict[str, Any]:
         hittil = None
         if data["kwh_hittil"] is not None or data["snitt_hittil"] is not None:
             hittil = {
@@ -250,18 +262,27 @@ class StromregnskapCoordinator(
         estimat = None
         if data["estimat_kwh"] is not None:
             estimat = {"kwh": data["estimat_kwh"], "kr": data["estimat_kr"]}
-        html = render_side(
-            {
-                "leietaker": self.leietaker,
-                "utleier": self.utleier,
-                "forfallsdag": int(self.cfg[CONF_FORFALLSDAG]),
-                "perioder": data["perioder"],
-                "hittil": hittil,
-                "estimat": estimat,
-                "oppdatert": naa,
-                "pdf_base": f"/stromregnskap/{self.cfg[CONF_SLUG]}",
-            }
-        )
+        return {
+            "leietaker": self.leietaker,
+            "utleier": self.utleier,
+            "forfallsdag": int(self.cfg[CONF_FORFALLSDAG]),
+            "perioder": data["perioder"],
+            "hittil": hittil,
+            "estimat": estimat,
+            "oppdatert": naa,
+            "pdf_base": f"/stromregnskap/{self.cfg[CONF_SLUG]}",
+        }
+
+    def bygg_side_html(self, naa: datetime) -> str:
+        """Leietakersiden med tall som er ferske akkurat nå (brukes for hver forespørsel)."""
+        return render_side(self._side_ctx(naa, self._bygg_data(naa)))
+
+    async def _skriv_side(self, naa: datetime, data: dict[str, Any] | None = None) -> None:
+        """Skriver siden til www/ (reserve for /local, og siste kjente tilstand)."""
+        if not self.cfg.get(CONF_PUBLISER_SIDE):
+            return
+        data = data or self._bygg_data(naa)
+        html = render_side(self._side_ctx(naa, data))
         await self.hass.async_add_executor_job(skriv_atomisk, self.side_sti, html)
         self._side_publisert = naa
 

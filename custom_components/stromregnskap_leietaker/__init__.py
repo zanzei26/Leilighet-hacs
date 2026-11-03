@@ -9,7 +9,7 @@ from datetime import datetime
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
-from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.event import async_track_state_change_event, async_track_time_change
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
 
@@ -105,6 +105,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: StromregnskapConfigEntry
 
     _registrer_side(hass, entry, coordinator)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # Live: sensorene følger kildene med en gang (høyst én oppdatering per 15. sekund)
+    coordinator.start_live()
+    entry.async_on_unload(coordinator.stopp_live)
+    entry.async_on_unload(
+        async_track_state_change_event(
+            hass, coordinator.kildeentiteter(), coordinator.async_kilde_endret
+        )
+    )
     # Rett etter midnatt: lagre målerstanden ved månedsskiftet (ellers hentes den senere)
     entry.async_on_unload(
         async_track_time_change(

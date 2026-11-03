@@ -87,6 +87,7 @@ SENSORER: tuple[StromSensorBeskrivelse, ...] = (
             "endring_prosent": d["endring_prosent"],
             "effekt_w": d["effekt_w"],
             "maaler_total_kwh": d["import_kwh"],
+            "kilde_hittil": d["hittil_kilde"],
         },
     ),
     StromSensorBeskrivelse(

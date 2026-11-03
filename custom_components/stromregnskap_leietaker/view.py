@@ -9,11 +9,18 @@ siden med «no-store» slik at leietaker alltid ser ferske tall.
 
 from __future__ import annotations
 
+import logging
+
 from aiohttp import web
 from homeassistant.components.http import HomeAssistantView
 from homeassistant.core import HomeAssistant
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
+
+_LOGGER = logging.getLogger(__name__)
+
+HODER = {"Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow"}
 
 
 def _les(sti: str) -> bytes | None:
@@ -37,16 +44,19 @@ class LeietakerSideView(HomeAssistantView):
         self.name = f"{DOMAIN}:side:{slug}"
 
     async def get(self, request: web.Request) -> web.Response:
-        sti = self.hass.data.get(DOMAIN, {}).get("aktive_slugs", {}).get(self.slug)
+        reg = self.hass.data.get(DOMAIN, {})
+        koordinator = reg.get("koordinatorer", {}).get(self.slug)
+        if koordinator is not None:
+            try:
+                html = koordinator.bygg_side_html(dt_util.now())
+            except Exception:  # noqa: BLE001 - leietaker skal få siste lagrede side hvis byggingen feiler
+                _LOGGER.exception("Kunne ikke bygge leietakersiden, bruker lagret fil")
+            else:
+                return web.Response(
+                    text=html, content_type="text/html", charset="utf-8", headers=HODER
+                )
+        sti = reg.get("aktive_slugs", {}).get(self.slug)
         innhold = await self.hass.async_add_executor_job(_les, sti) if sti else None
         if innhold is None:
             return web.Response(status=404)
-        return web.Response(
-            body=innhold,
-            content_type="text/html",
-            charset="utf-8",
-            headers={
-                "Cache-Control": "no-store",
-                "X-Robots-Tag": "noindex, nofollow",
-            },
-        )
+        return web.Response(body=innhold, content_type="text/html", charset="utf-8", headers=HODER)

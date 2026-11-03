@@ -240,6 +240,7 @@ def render_side(ctx: dict[str, Any]) -> str:
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
+<meta http-equiv="refresh" content="60">
 <title>Strømregnskap · {_e(lt["adresse"])}</title>
 <style>{CSS}</style>
 </head>

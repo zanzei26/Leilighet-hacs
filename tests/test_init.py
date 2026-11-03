@@ -46,8 +46,8 @@ async def test_oppsett_importerer_historikk_og_lager_entiteter(
     assert hass.states.get("sensor.leietaker_utestaende").attributes["antall_perioder"] == 1
     assert hass.states.get("sensor.leietaker_siste_oppgjor").state == "304.25"
     assert hass.states.get("sensor.leietaker_siste_oppgjor").attributes["leilighet_kwh"] == 234.0
-    assert hass.states.get("sensor.leietaker_forbruk_hittil").state == "30.25"
-    assert hass.states.get("sensor.leietaker_kostnad_hittil").state == "40.0"
+    assert hass.states.get("sensor.leietaker_forbruk_hittil").state == "30.3"
+    assert hass.states.get("sensor.leietaker_kostnad_hittil").state == "45.45"
     assert hass.states.get("sensor.leietaker_estimat_maned").state == "371.18"
     assert hass.states.get("sensor.leietaker_estimat_maned").attributes["estimat_kwh"] == 285.48
     assert hass.states.get("binary_sensor.leietaker_oppgjor_venter_godkjenning").state == "off"
