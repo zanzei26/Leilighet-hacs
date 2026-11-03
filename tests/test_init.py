@@ -3,7 +3,6 @@
 from unittest.mock import patch
 
 from homeassistant.config_entries import ConfigEntryState
-from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry, async_mock_service
 
 from custom_components.stromregnskap_leietaker.const import DOMAIN
@@ -73,10 +72,9 @@ async def test_uten_import_er_historikken_tom(hass, hass_storage, tmp_path, free
 
 
 async def test_siden_serveres_uten_innlogging_uten_cache(
-    hass, hass_storage, hass_client_no_auth, tmp_path, freezer
+    hass, hass_storage, http_klient, tmp_path, freezer
 ):
-    assert await async_setup_component(hass, "http", {})
-    klient = await hass_client_no_auth()
+    klient = http_klient
     await _sett_opp(hass, tmp_path, freezer)
     svar = await klient.get(SIDE)
     assert svar.status == 200
@@ -89,18 +87,16 @@ async def test_siden_serveres_uten_innlogging_uten_cache(
     assert (tmp_path / "www" / "testslug123" / "index.html").read_text(encoding="utf-8") == html
 
 
-async def test_feil_slug_gir_404(hass, hass_storage, hass_client_no_auth, tmp_path, freezer):
-    assert await async_setup_component(hass, "http", {})
-    klient = await hass_client_no_auth()
+async def test_feil_slug_gir_404(hass, hass_storage, http_klient, tmp_path, freezer):
+    klient = http_klient
     await _sett_opp(hass, tmp_path, freezer)
     assert (await klient.get("/local/annen-slug/index.html")).status == 404
 
 
 async def test_siden_forsvinner_ved_nedlasting_og_kommer_tilbake_ved_ny_innlasting(
-    hass, hass_storage, hass_client_no_auth, tmp_path, freezer
+    hass, hass_storage, http_klient, tmp_path, freezer
 ):
-    assert await async_setup_component(hass, "http", {})
-    klient = await hass_client_no_auth()
+    klient = http_klient
     entry = await _sett_opp(hass, tmp_path, freezer)
     assert (await klient.get(SIDE)).status == 200
 
@@ -115,10 +111,9 @@ async def test_siden_forsvinner_ved_nedlasting_og_kommer_tilbake_ved_ny_innlasti
 
 
 async def test_ingen_side_og_ingen_rute_naar_publisering_er_av(
-    hass, hass_storage, hass_client_no_auth, tmp_path, freezer
+    hass, hass_storage, http_klient, tmp_path, freezer
 ):
-    assert await async_setup_component(hass, "http", {})
-    klient = await hass_client_no_auth()
+    klient = http_klient
     await _sett_opp(hass, tmp_path, freezer, publiser_side=False)
     assert (await klient.get(SIDE)).status == 404
     assert not (tmp_path / "www").exists()

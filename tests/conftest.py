@@ -65,6 +65,7 @@ async def integrasjon(hass, hass_storage, tmp_path, freezer):
     sett_kilder(hass, denne={"mnd": "2026-11", "snitt": 1.5, "leilighet_kr": 40.0}, utility="30.25")
     varsler = async_mock_service(hass, "notify", "varsle_magnar")
     assert await async_setup_component(hass, "http", {})
+    tillat_ruter_etter_oppstart(hass)
 
     entry = MockConfigEntry(domain=DOMAIN, data={**CFG, "importer_historikk": True}, entry_id="e1")
     entry.add_to_hass(hass)
@@ -77,3 +78,23 @@ async def integrasjon(hass, hass_storage, tmp_path, freezer):
         yield SimpleNamespace(
             entry=entry, epost=epost, varsler=varsler, tmp=tmp_path, freezer=freezer
         )
+
+
+def tillat_ruter_etter_oppstart(hass) -> None:
+    """Gjør det samme som HomeAssistantHTTP.start(): ruter kan registreres etter oppstart.
+
+    Testfixturen aiohttp_client gjør dette også, men hvilken plugin som leverer den
+    avhenger av registreringsrekkefølgen (pytest-aiohttp vs. HAs plugin), og den
+    rekkefølgen er ulik lokalt og i CI. Derfor gjør vi det eksplisitt.
+    """
+    hass.http.app._router.freeze = lambda: None
+
+
+@pytest.fixture
+async def http_klient(hass, hass_client_no_auth):
+    """Uautentisert HTTP-klient mot en http-komponent som tillater nye ruter."""
+    from homeassistant.setup import async_setup_component
+
+    assert await async_setup_component(hass, "http", {})
+    tillat_ruter_etter_oppstart(hass)
+    return await hass_client_no_auth()
