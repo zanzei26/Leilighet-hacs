@@ -1,0 +1,284 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Tenant and landlord",
+        "description": "Details about the tenant, the landlord and the payment.",
+        "data": {
+          "leietaker_navn": "Tenant name",
+          "leietaker_epost": "Tenant email",
+          "adresse": "Address",
+          "innflyttet": "Move-in date",
+          "utleier_navn": "Landlord name",
+          "utleier_epost": "Landlord email",
+          "kontonummer": "Bank account number",
+          "forfallsdag": "Due day of the month (1–28)"
+        }
+      },
+      "kilder": {
+        "title": "Data sources",
+        "description": "The sensors the integration reads from. The defaults match the existing setup.",
+        "data": {
+          "ent_regnskap": "Electricity accounts (house monthly figures)",
+          "ent_utility": "Apartment usage this month (utility_meter)",
+          "ent_import": "Raw meter, accumulated kWh",
+          "ent_effekt": "Instantaneous power (W)",
+          "ent_prognose": "Usage forecast",
+          "varsel_tjeneste": "Notification service for the landlord (notify.name)"
+        }
+      },
+      "epost": {
+        "title": "Email (SMTP)",
+        "description": "The settlement is sent from Home Assistant over SMTP. For Gmail use smtp.gmail.com, port 587 and an app password. The password is stored unencrypted in the configuration.",
+        "data": {
+          "smtp_host": "SMTP server",
+          "smtp_port": "Port",
+          "smtp_bruker": "Username",
+          "smtp_passord": "App password",
+          "cc_utleier": "Send a copy to the landlord",
+          "send_test": "Send a test email to the landlord now"
+        }
+      },
+      "side": {
+        "title": "Tenant page",
+        "description": "The tenant gets a permanent link to a page with the outstanding amount, usage so far this month and history. The link contains a secret random part and needs no login.\n\nLink: {lenke}",
+        "data": {
+          "publiser_side": "Publish the tenant page"
+        }
+      },
+      "grenser": {
+        "title": "Sanity checks and run time",
+        "description": "If the settlement passes the checks it is sent automatically. Otherwise you get a notification and it waits for your approval.",
+        "data": {
+          "snitt_min": "Lowest average price (NOK/kWh)",
+          "snitt_maks": "Highest average price (NOK/kWh)",
+          "endring_maks_prosent": "Max change in kWh versus the previous period (±%)",
+          "kjoredag": "First run day of the month",
+          "kjoretid": "Time of day",
+          "siste_sjekkdag": "Last day to keep checking"
+        }
+      },
+      "importer": {
+        "title": "Existing history",
+        "description": "Import the periods that have already been invoiced so history and outstanding amounts are correct from the start:\n\n{historikk}",
+        "data": {
+          "importer_historikk": "Import existing history"
+        }
+      },
+      "reconfigure": {
+        "title": "New tenant",
+        "description": "Enter the details of the new tenant.",
+        "data": {
+          "leietaker_navn": "Tenant name",
+          "leietaker_epost": "Tenant email",
+          "adresse": "Address",
+          "innflyttet": "Move-in date"
+        }
+      }
+    },
+    "error": {
+      "ugyldig_epost": "Invalid email address.",
+      "paakrevd": "This field cannot be empty.",
+      "tjeneste_finnes_ikke": "That notification service does not exist in Home Assistant.",
+      "snitt_grense": "The highest average price must be greater than the lowest.",
+      "kjoredag_rekkefolge": "The last check day cannot be before the first run day.",
+      "smtp_auth": "Login rejected. Check the username and app password.",
+      "smtp_connect": "Could not reach the SMTP server. Check the server and port.",
+      "smtp_send": "The SMTP server rejected the test email."
+    },
+    "abort": {
+      "single_instance_allowed": "Tenant electricity accounts is already set up.",
+      "reconfigure_successful": "The tenant details have been updated."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Change settings",
+        "menu_options": {
+          "leietaker": "Tenant, landlord and payment",
+          "kilder": "Data sources and notifications",
+          "epost": "Email (SMTP)",
+          "side": "Tenant page",
+          "grenser": "Sanity checks and run time"
+        }
+      },
+      "leietaker": {
+        "title": "Tenant, landlord and payment",
+        "data": {
+          "leietaker_navn": "Tenant name",
+          "leietaker_epost": "Tenant email",
+          "adresse": "Address",
+          "innflyttet": "Move-in date",
+          "utleier_navn": "Landlord name",
+          "utleier_epost": "Landlord email",
+          "kontonummer": "Bank account number",
+          "forfallsdag": "Due day of the month (1–28)"
+        }
+      },
+      "kilder": {
+        "title": "Data sources and notifications",
+        "data": {
+          "ent_regnskap": "Electricity accounts (house monthly figures)",
+          "ent_utility": "Apartment usage this month (utility_meter)",
+          "ent_import": "Raw meter, accumulated kWh",
+          "ent_effekt": "Instantaneous power (W)",
+          "ent_prognose": "Usage forecast",
+          "varsel_tjeneste": "Notification service for the landlord (notify.name)"
+        }
+      },
+      "epost": {
+        "title": "Email (SMTP)",
+        "description": "Leave the password empty to keep the current app password.",
+        "data": {
+          "smtp_host": "SMTP server",
+          "smtp_port": "Port",
+          "smtp_bruker": "Username",
+          "smtp_passord": "App password",
+          "cc_utleier": "Send a copy to the landlord",
+          "send_test": "Send a test email to the landlord now"
+        }
+      },
+      "side": {
+        "title": "Tenant page",
+        "description": "The tenant gets a permanent link to a page with the outstanding amount, usage so far this month and history. The link contains a secret random part and needs no login.\n\nLink: {lenke}",
+        "data": {
+          "publiser_side": "Publish the tenant page"
+        }
+      },
+      "grenser": {
+        "title": "Sanity checks and run time",
+        "data": {
+          "snitt_min": "Lowest average price (NOK/kWh)",
+          "snitt_maks": "Highest average price (NOK/kWh)",
+          "endring_maks_prosent": "Max change in kWh versus the previous period (±%)",
+          "kjoredag": "First run day of the month",
+          "kjoretid": "Time of day",
+          "siste_sjekkdag": "Last day to keep checking"
+        }
+      }
+    },
+    "error": {
+      "ugyldig_epost": "Invalid email address.",
+      "paakrevd": "This field cannot be empty.",
+      "tjeneste_finnes_ikke": "That notification service does not exist in Home Assistant.",
+      "snitt_grense": "The highest average price must be greater than the lowest.",
+      "kjoredag_rekkefolge": "The last check day cannot be before the first run day.",
+      "smtp_auth": "Login rejected. Check the username and app password.",
+      "smtp_connect": "Could not reach the SMTP server. Check the server and port.",
+      "smtp_send": "The SMTP server rejected the test email."
+    }
+  },
+  "issues": {
+    "venter_godkjenning": {
+      "title": "Settlement for {maned} awaits approval",
+      "description": "The settlement was not sent because: {detaljer}. Check the figures and approve to send it to the tenant.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Approve and send settlement",
+            "description": "Approve the settlement for {periode} and send it to the tenant?"
+          }
+        },
+        "abort": {
+          "handling_feilet": "Could not complete: {feil}"
+        }
+      }
+    },
+    "mangler_data": {
+      "title": "Missing data for the {maned} settlement",
+      "description": "The settlement for {periode} could not be created because {entitet} has no complete figures. It is retried hourly. You can also run the generer_oppgjor service manually."
+    },
+    "epost_feilet": {
+      "title": "The email for the {maned} settlement could not be sent",
+      "description": "The email was not sent after 48 hours of retries. Check the SMTP settings and send it again.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Send email again",
+            "description": "Send the settlement for {periode} to the tenant again?"
+          }
+        },
+        "abort": {
+          "handling_feilet": "Could not complete: {feil}"
+        }
+      }
+    }
+  },
+  "services": {
+    "generer_oppgjor": {
+      "name": "Generate settlement",
+      "description": "Creates the monthly settlement for a period.",
+      "fields": {
+        "periode": {
+          "name": "Period",
+          "description": "The month as YYYY-MM. Defaults to the previous month."
+        },
+        "tving": {
+          "name": "Override sanity checks",
+          "description": "Create the settlement even if the sanity checks fail."
+        },
+        "send_epost": {
+          "name": "Send email",
+          "description": "Email the settlement to the tenant."
+        }
+      }
+    },
+    "godkjenn_oppgjor": {
+      "name": "Approve settlement",
+      "description": "Sends a settlement that is awaiting approval.",
+      "fields": {
+        "periode": {
+          "name": "Period",
+          "description": "The month as YYYY-MM."
+        }
+      }
+    },
+    "send_epost_pa_nytt": {
+      "name": "Send email again",
+      "description": "Sends the settlement to the tenant again.",
+      "fields": {
+        "periode": {
+          "name": "Period",
+          "description": "The month as YYYY-MM."
+        }
+      }
+    },
+    "sett_status": {
+      "name": "Set payment status",
+      "description": "Sets the status of a period. Use unntak_ikke_betalt to stop an overdue period from being marked paid automatically.",
+      "fields": {
+        "periode": {
+          "name": "Period",
+          "description": "The month as YYYY-MM."
+        },
+        "status": {
+          "name": "Status",
+          "description": "betalt, ikke_betalt or unntak_ikke_betalt."
+        }
+      }
+    },
+    "publiser_side": {
+      "name": "Publish page",
+      "description": "Regenerates the tenant page now."
+    },
+    "slett_periode": {
+      "name": "Delete period",
+      "description": "Deletes a period from the history. This cannot be undone.",
+      "fields": {
+        "periode": {
+          "name": "Period",
+          "description": "The month as YYYY-MM."
+        },
+        "bekreft": {
+          "name": "Confirm",
+          "description": "Must be true for the period to be deleted."
+        }
+      }
+    },
+    "ny_leietaker": {
+      "name": "New tenant",
+      "description": "Archives and clears the history, replaces the tenant link and opens reconfiguration for the new tenant's details."
+    }
+  }
+}

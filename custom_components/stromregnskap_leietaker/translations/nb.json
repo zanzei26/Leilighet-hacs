@@ -1,0 +1,284 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Leietaker og utleier",
+        "description": "Opplysninger om leietaker, utleier og betalingen.",
+        "data": {
+          "leietaker_navn": "Leietakers navn",
+          "leietaker_epost": "Leietakers e-post",
+          "adresse": "Adresse",
+          "innflyttet": "Innflyttingsdato",
+          "utleier_navn": "Utleiers navn",
+          "utleier_epost": "Utleiers e-post",
+          "kontonummer": "Kontonummer",
+          "forfallsdag": "Forfallsdag i måneden (1–28)"
+        }
+      },
+      "kilder": {
+        "title": "Datakilder",
+        "description": "Sensorene integrasjonen leser fra. Standardverdiene passer det eksisterende oppsettet.",
+        "data": {
+          "ent_regnskap": "Strømregnskap (husets månedstall)",
+          "ent_utility": "Leilighetens forbruk denne måneden (utility_meter)",
+          "ent_import": "Rå måler, akkumulert kWh",
+          "ent_effekt": "Øyeblikkseffekt (W)",
+          "ent_prognose": "Forbruksprognose",
+          "varsel_tjeneste": "Varslingstjeneste til utleier (notify.navn)"
+        }
+      },
+      "epost": {
+        "title": "E-post (SMTP)",
+        "description": "Oppgjøret sendes fra Home Assistant via SMTP. For Gmail brukes smtp.gmail.com, port 587 og et app-passord. Passordet lagres i oppsettet uten kryptering.",
+        "data": {
+          "smtp_host": "SMTP-server",
+          "smtp_port": "Port",
+          "smtp_bruker": "Brukernavn",
+          "smtp_passord": "App-passord",
+          "cc_utleier": "Send kopi til utleier",
+          "send_test": "Send test-e-post til utleier nå"
+        }
+      },
+      "side": {
+        "title": "Leietakerside",
+        "description": "Leietaker får en fast lenke til en side med utestående beløp, forbruk hittil denne måneden og historikk. Lenken har en hemmelig, tilfeldig del og krever ikke innlogging.\n\nLenke: {lenke}",
+        "data": {
+          "publiser_side": "Publiser leietakersiden"
+        }
+      },
+      "grenser": {
+        "title": "Rimelighetskontroll og kjøretid",
+        "description": "Passerer oppgjøret kontrollen, sendes det automatisk. Ellers får du et varsel og oppgjøret venter på din godkjenning.",
+        "data": {
+          "snitt_min": "Laveste snittpris (kr/kWh)",
+          "snitt_maks": "Høyeste snittpris (kr/kWh)",
+          "endring_maks_prosent": "Maks endring i kWh mot forrige periode (±%)",
+          "kjoredag": "Første kjøredag i måneden",
+          "kjoretid": "Klokkeslett",
+          "siste_sjekkdag": "Siste dag det sjekkes"
+        }
+      },
+      "importer": {
+        "title": "Eksisterende historikk",
+        "description": "Importer periodene som allerede er fakturert, så historikk og utestående stemmer fra start:\n\n{historikk}",
+        "data": {
+          "importer_historikk": "Importer eksisterende historikk"
+        }
+      },
+      "reconfigure": {
+        "title": "Ny leietaker",
+        "description": "Fyll inn opplysninger om den nye leietakeren.",
+        "data": {
+          "leietaker_navn": "Leietakers navn",
+          "leietaker_epost": "Leietakers e-post",
+          "adresse": "Adresse",
+          "innflyttet": "Innflyttingsdato"
+        }
+      }
+    },
+    "error": {
+      "ugyldig_epost": "Ugyldig e-postadresse.",
+      "paakrevd": "Feltet kan ikke være tomt.",
+      "tjeneste_finnes_ikke": "Varslingstjenesten finnes ikke i Home Assistant.",
+      "snitt_grense": "Høyeste snittpris må være større enn laveste.",
+      "kjoredag_rekkefolge": "Siste sjekkdag kan ikke komme før første kjøredag.",
+      "smtp_auth": "Innlogging avvist. Sjekk brukernavn og app-passord.",
+      "smtp_connect": "Kunne ikke nå SMTP-serveren. Sjekk server og port.",
+      "smtp_send": "SMTP-serveren avviste test-e-posten."
+    },
+    "abort": {
+      "single_instance_allowed": "Strømregnskap leietaker er allerede satt opp.",
+      "reconfigure_successful": "Leietakeropplysningene er oppdatert."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Endre innstillinger",
+        "menu_options": {
+          "leietaker": "Leietaker, utleier og betaling",
+          "kilder": "Datakilder og varsling",
+          "epost": "E-post (SMTP)",
+          "side": "Leietakerside",
+          "grenser": "Rimelighetskontroll og kjøretid"
+        }
+      },
+      "leietaker": {
+        "title": "Leietaker, utleier og betaling",
+        "data": {
+          "leietaker_navn": "Leietakers navn",
+          "leietaker_epost": "Leietakers e-post",
+          "adresse": "Adresse",
+          "innflyttet": "Innflyttingsdato",
+          "utleier_navn": "Utleiers navn",
+          "utleier_epost": "Utleiers e-post",
+          "kontonummer": "Kontonummer",
+          "forfallsdag": "Forfallsdag i måneden (1–28)"
+        }
+      },
+      "kilder": {
+        "title": "Datakilder og varsling",
+        "data": {
+          "ent_regnskap": "Strømregnskap (husets månedstall)",
+          "ent_utility": "Leilighetens forbruk denne måneden (utility_meter)",
+          "ent_import": "Rå måler, akkumulert kWh",
+          "ent_effekt": "Øyeblikkseffekt (W)",
+          "ent_prognose": "Forbruksprognose",
+          "varsel_tjeneste": "Varslingstjeneste til utleier (notify.navn)"
+        }
+      },
+      "epost": {
+        "title": "E-post (SMTP)",
+        "description": "La passordfeltet stå tomt for å beholde gjeldende app-passord.",
+        "data": {
+          "smtp_host": "SMTP-server",
+          "smtp_port": "Port",
+          "smtp_bruker": "Brukernavn",
+          "smtp_passord": "App-passord",
+          "cc_utleier": "Send kopi til utleier",
+          "send_test": "Send test-e-post til utleier nå"
+        }
+      },
+      "side": {
+        "title": "Leietakerside",
+        "description": "Leietaker får en fast lenke til en side med utestående beløp, forbruk hittil denne måneden og historikk. Lenken har en hemmelig, tilfeldig del og krever ikke innlogging.\n\nLenke: {lenke}",
+        "data": {
+          "publiser_side": "Publiser leietakersiden"
+        }
+      },
+      "grenser": {
+        "title": "Rimelighetskontroll og kjøretid",
+        "data": {
+          "snitt_min": "Laveste snittpris (kr/kWh)",
+          "snitt_maks": "Høyeste snittpris (kr/kWh)",
+          "endring_maks_prosent": "Maks endring i kWh mot forrige periode (±%)",
+          "kjoredag": "Første kjøredag i måneden",
+          "kjoretid": "Klokkeslett",
+          "siste_sjekkdag": "Siste dag det sjekkes"
+        }
+      }
+    },
+    "error": {
+      "ugyldig_epost": "Ugyldig e-postadresse.",
+      "paakrevd": "Feltet kan ikke være tomt.",
+      "tjeneste_finnes_ikke": "Varslingstjenesten finnes ikke i Home Assistant.",
+      "snitt_grense": "Høyeste snittpris må være større enn laveste.",
+      "kjoredag_rekkefolge": "Siste sjekkdag kan ikke komme før første kjøredag.",
+      "smtp_auth": "Innlogging avvist. Sjekk brukernavn og app-passord.",
+      "smtp_connect": "Kunne ikke nå SMTP-serveren. Sjekk server og port.",
+      "smtp_send": "SMTP-serveren avviste test-e-posten."
+    }
+  },
+  "issues": {
+    "venter_godkjenning": {
+      "title": "Oppgjør for {maned} venter på godkjenning",
+      "description": "Oppgjøret ble ikke sendt fordi: {detaljer}. Kontroller tallene, og godkjenn for å sende det til leietaker.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Godkjenn og send oppgjør",
+            "description": "Godkjenne oppgjøret for {periode} og sende det til leietaker?"
+          }
+        },
+        "abort": {
+          "handling_feilet": "Kunne ikke fullføre: {feil}"
+        }
+      }
+    },
+    "mangler_data": {
+      "title": "Mangler data for oppgjøret for {maned}",
+      "description": "Oppgjøret for {periode} kunne ikke lages fordi {entitet} ikke har komplette tall. Det forsøkes igjen hver time. Du kan også kjøre tjenesten generer_oppgjor manuelt."
+    },
+    "epost_feilet": {
+      "title": "E-post for oppgjøret for {maned} kunne ikke sendes",
+      "description": "E-posten ble ikke sendt etter forsøk i 48 timer. Sjekk SMTP-oppsettet og send på nytt.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Send e-post på nytt",
+            "description": "Sende oppgjøret for {periode} til leietaker på nytt?"
+          }
+        },
+        "abort": {
+          "handling_feilet": "Kunne ikke fullføre: {feil}"
+        }
+      }
+    }
+  },
+  "services": {
+    "generer_oppgjor": {
+      "name": "Generer oppgjør",
+      "description": "Lager månedsoppgjøret for en periode.",
+      "fields": {
+        "periode": {
+          "name": "Periode",
+          "description": "Måneden som ÅÅÅÅ-MM. Standard er forrige måned."
+        },
+        "tving": {
+          "name": "Overstyr rimelighetskontroll",
+          "description": "Lag oppgjøret selv om rimelighetskontrollen slår ut."
+        },
+        "send_epost": {
+          "name": "Send e-post",
+          "description": "Send oppgjøret til leietaker på e-post."
+        }
+      }
+    },
+    "godkjenn_oppgjor": {
+      "name": "Godkjenn oppgjør",
+      "description": "Sender et oppgjør som venter på godkjenning.",
+      "fields": {
+        "periode": {
+          "name": "Periode",
+          "description": "Måneden som ÅÅÅÅ-MM."
+        }
+      }
+    },
+    "send_epost_pa_nytt": {
+      "name": "Send e-post på nytt",
+      "description": "Sender oppgjøret til leietaker på nytt.",
+      "fields": {
+        "periode": {
+          "name": "Periode",
+          "description": "Måneden som ÅÅÅÅ-MM."
+        }
+      }
+    },
+    "sett_status": {
+      "name": "Sett betalingsstatus",
+      "description": "Setter status for en periode. Bruk unntak_ikke_betalt for at en forfalt periode ikke skal merkes som betalt automatisk.",
+      "fields": {
+        "periode": {
+          "name": "Periode",
+          "description": "Måneden som ÅÅÅÅ-MM."
+        },
+        "status": {
+          "name": "Status",
+          "description": "betalt, ikke_betalt eller unntak_ikke_betalt."
+        }
+      }
+    },
+    "publiser_side": {
+      "name": "Publiser side",
+      "description": "Lager leietakersiden på nytt nå."
+    },
+    "slett_periode": {
+      "name": "Slett periode",
+      "description": "Sletter en periode fra historikken. Kan ikke angres.",
+      "fields": {
+        "periode": {
+          "name": "Periode",
+          "description": "Måneden som ÅÅÅÅ-MM."
+        },
+        "bekreft": {
+          "name": "Bekreft",
+          "description": "Må være true for at perioden slettes."
+        }
+      }
+    },
+    "ny_leietaker": {
+      "name": "Ny leietaker",
+      "description": "Arkiverer historikken, tømmer den, bytter leietakerlenke og åpner rekonfigurering for nye leietakerdata."
+    }
+  }
+}
