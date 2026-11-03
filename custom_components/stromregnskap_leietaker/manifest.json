@@ -1,0 +1,15 @@
+{
+  "domain": "stromregnskap_leietaker",
+  "name": "Strømregnskap leietaker",
+  "codeowners": ["@zanzei26"],
+  "config_flow": true,
+  "dependencies": ["http"],
+  "after_dependencies": ["cloud"],
+  "documentation": "https://github.com/zanzei26/Leilighet-hacs",
+  "integration_type": "service",
+  "iot_class": "calculated",
+  "issue_tracker": "https://github.com/zanzei26/Leilighet-hacs/issues",
+  "requirements": [],
+  "single_config_entry": true,
+  "version": "0.1.0"
+}

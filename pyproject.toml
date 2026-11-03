@@ -1,0 +1,15 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+filterwarnings = ["ignore::DeprecationWarning"]
+
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+"custom_components/stromregnskap_leietaker/mail.py" = ["E501"]  # HTML-mal
+"custom_components/stromregnskap_leietaker/page.py" = ["E501"]  # HTML-mal

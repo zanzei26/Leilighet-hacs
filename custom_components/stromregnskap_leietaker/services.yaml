@@ -1,0 +1,66 @@
+generer_oppgjor:
+  fields:
+    periode:
+      required: false
+      example: "2026-11"
+      selector:
+        text:
+    tving:
+      required: false
+      default: false
+      selector:
+        boolean:
+    send_epost:
+      required: false
+      default: true
+      selector:
+        boolean:
+
+godkjenn_oppgjor:
+  fields:
+    periode:
+      required: true
+      example: "2026-11"
+      selector:
+        text:
+
+send_epost_pa_nytt:
+  fields:
+    periode:
+      required: true
+      example: "2026-11"
+      selector:
+        text:
+
+sett_status:
+  fields:
+    periode:
+      required: true
+      example: "2026-11"
+      selector:
+        text:
+    status:
+      required: true
+      selector:
+        select:
+          options:
+            - betalt
+            - ikke_betalt
+            - unntak_ikke_betalt
+
+publiser_side:
+
+slett_periode:
+  fields:
+    periode:
+      required: true
+      example: "2026-11"
+      selector:
+        text:
+    bekreft:
+      required: true
+      default: false
+      selector:
+        boolean:
+
+ny_leietaker:
