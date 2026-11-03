@@ -17,6 +17,7 @@ from homeassistant.util import dt as dt_util
 from .const import (
     CONF_ENT_EFFEKT,
     CONF_ENT_IMPORT,
+    CONF_ENT_LADER,
     CONF_ENT_PROGNOSE,
     CONF_ENT_REGNSKAP,
     CONF_ENT_UTILITY,
@@ -41,7 +42,10 @@ class LiveMixin:
             CONF_ENT_PROGNOSE,
             CONF_ENT_EFFEKT,
         )
-        return sorted({c[k] for k in nokler if c.get(k)})
+        entiteter = {c[k] for k in nokler if c.get(k)}
+        if self.lader_aktiv:
+            entiteter.add(c[CONF_ENT_LADER])
+        return sorted(entiteter)
 
     def start_live(self) -> None:
         self._live = Debouncer(

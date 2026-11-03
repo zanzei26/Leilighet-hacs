@@ -11,9 +11,9 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.util import dt as dt_util
 
 from .calc import periode_start_slutt
-from .const import CONF_ENT_IMPORT, CONF_ENT_REGNSKAP
+from .const import CONF_ENT_IMPORT, CONF_ENT_LADER, CONF_ENT_REGNSKAP
 from .kilder import fullstendig
-from .maaler import LIVE_VINDU
+from .maaler import LADER, LIVE_VINDU
 from .varsler import ISSUE_DATAGRUNNLAG, ISSUE_ETTERSLEP
 
 VARSEL_FRA_DAG = 25
@@ -50,6 +50,15 @@ class DatagrunnlagMixin:
                 f"Målerstand ved månedsskiftet {start:%d.%m.%Y} mangler. "
                 "Legg den inn med handlingen «Sett målerstand»."
             )
+
+        if self.lader_aktiv:
+            if self.kilder.float_tilstand(c[CONF_ENT_LADER]) is None:
+                problemer.append(f"Laderens teller {c[CONF_ENT_LADER]} er utilgjengelig.")
+            if self._lagret_stand(start, LADER) is None and naa - grense > LIVE_VINDU:
+                problemer.append(
+                    f"Laderens teller ved månedsskiftet {start:%d.%m.%Y} mangler. "
+                    "Legg den inn med handlingen «Sett målerstand» (måler: lader)."
+                )
 
         if naa.day >= 3:
             bilde = self.lager.data["snapshots"].get(mnd)

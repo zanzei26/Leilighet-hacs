@@ -15,12 +15,14 @@ from .calc import (
     beregn_oppgjor,
     forrige_periode,
     forrige_periode_id,
+    leilighet_belop,
     periode_start_slutt,
     sjekk_rimelighet,
     velg_leilighet_kwh,
 )
 from .const import CONF_ENT_REGNSKAP, CONF_FORFALLSDAG
 from .kilder import fullstendig, til_float
+from .maaler import LADER
 from .page import fmt_kwh, fmt_tall
 from .varsler import ISSUE_MANGLER, ISSUE_VENTER
 
@@ -32,10 +34,16 @@ class ManglerData(ServiceValidationError):
 
 
 def sammendrag(p: dict[str, Any]) -> str:
-    return (
+    tekst = (
         f"{fmt_kwh(p['leilighet_kwh'])} kWh × {fmt_tall(p['snitt'], 4)} "
-        f"= {fmt_tall(p['belop'], 2)} kr"
+        f"= {fmt_tall(leilighet_belop(p), 2)} kr"
     )
+    if p.get("lader_kwh") is not None:
+        tekst += (
+            f" + lader {fmt_kwh(p['lader_kwh'])} kWh = {fmt_tall(p['lader_belop'], 2)} kr "
+            f"(totalt {fmt_tall(p['belop'], 2)} kr)"
+        )
+    return tekst
 
 
 class GenereringMixin:
@@ -92,6 +100,7 @@ class GenereringMixin:
             self.kilder.last_period() if periode_id == forrige_periode_id(naa.date()) else None
         )
         maaler = self._maaler_forbruk(periode_id)
+        lader = self._lader_forbruk(periode_id) if self.lader_aktiv else None
         valg = velg_leilighet_kwh(
             til_float(maned.get("leilighet_kwh")), last_period, maaler=maaler.kwh
         )
@@ -104,12 +113,19 @@ class GenereringMixin:
             leilighet_kwh=valg.kwh,
             forfallsdag=int(self.cfg[CONF_FORFALLSDAG]),
             naa=naa,
-            kilde=valg.kilde + (" + snapshot" if fra_bilde else ""),
+            kilde=valg.kilde
+            + (" + laderstander" if lader is not None and lader.kwh is not None else "")
+            + (" + snapshot" if fra_bilde else ""),
+            lader_kwh=lader.kwh if lader is not None else None,
         )
         if maaler.kwh is not None:
             start, slutt = periode_start_slutt(periode_id)
             p["maaler_start"] = avrund(self._lagret_stand(start), 1)
             p["maaler_slutt"] = avrund(self._lagret_stand(slutt), 1)
+        if lader is not None and lader.kwh is not None:
+            start, slutt = periode_start_slutt(periode_id)
+            p["lader_start"] = avrund(self._lagret_stand(start, LADER), 1)
+            p["lader_slutt"] = avrund(self._lagret_stand(slutt, LADER), 1)
         brudd: list[str] = []
         if not tving:
             if fra_bilde:
@@ -126,6 +142,16 @@ class GenereringMixin:
                     f"Målerstand mangler ved {start:%d.%m.%Y} eller {slutt:%d.%m.%Y}. "
                     "kWh er hentet fra regnskapssensoren og må kontrolleres."
                 )
+            if lader is not None:
+                if lader.feil:
+                    brudd.append(lader.feil + " Beløpet er regnet uten lader.")
+                elif lader.kwh is None:
+                    start, slutt = periode_start_slutt(periode_id)
+                    brudd.append(
+                        f"Laderens teller mangler ved {start:%d.%m.%Y} eller {slutt:%d.%m.%Y}. "
+                        "Beløpet er regnet uten lader. Legg inn telleren med handlingen «Sett "
+                        "målerstand», slett perioden og lag den på nytt."
+                    )
             if valg.avvik:
                 brudd.append(valg.avvik)
             forrige = forrige_periode(self.lager.perioder, periode_id)
@@ -135,6 +161,7 @@ class GenereringMixin:
                 snitt=p["snitt"],
                 forrige_kwh=forrige["leilighet_kwh"] if forrige else None,
                 grenser=self.grenser,
+                ekstra_kwh=p.get("lader_kwh") or 0.0,
             )
 
         self.varsler.fjern_issue(ISSUE_MANGLER, periode_id)

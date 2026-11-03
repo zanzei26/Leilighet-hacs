@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from html import escape
 from typing import Any
 
-from .calc import STATUS_BETALT, STATUS_VENTER, avrund, utestaaende
+from .calc import STATUS_BETALT, STATUS_VENTER, avrund, har_lader, utestaaende
 from .filnavn import REGNSKAPSNAVN, fakturanavn
 
 MAANEDER = (
@@ -117,6 +117,13 @@ def _hittil(ctx: dict[str, Any]) -> str:
         kwh = "–"
     snitt = f"{fmt_tall(h['snitt'], 4)} kr/kWh" if h and h.get("snitt") is not None else "–"
     kr = f"{fmt_tall(h['kr'], 2)} kr" if h and h.get("kr") is not None else "–"
+    lader = ""
+    if h and h.get("lader_kwh"):
+        lader_kr = f" / {fmt_tall(h['lader_kr'], 2)} kr" if h.get("lader_kr") is not None else ""
+        lader = (
+            f'<p class="liten">Herav elbil-lader: <strong>{fmt_kwh(h["lader_kwh"])} kWh'
+            f"{lader_kr}</strong></p>"
+        )
     est = ctx.get("estimat")
     if est:
         estimat = (
@@ -133,6 +140,7 @@ def _hittil(ctx: dict[str, Any]) -> str:
     <div><div class="tall">{snitt}</div><div class="tekst">Snittpris hittil</div></div>
     <div><div class="tall">{kr}</div><div class="tekst">Kostnad hittil</div></div>
   </div>
+  {lader}
   <p class="liten">Snittpris og kostnad er høyere tidlig i måneden fordi de faste leddene
   fordeles på få kWh. Utover måneden synker snittprisen.</p>
   {estimat}
@@ -160,10 +168,19 @@ def _historikk(synlige: list[dict[str, Any]], ubetalt_sum: float, pdf_base: str 
             "Last ned PDF</a>"
         )
 
+    def ladercelle(p: dict[str, Any]) -> str:
+        if not har_lader(p):
+            return ""
+        # kan brytes foran tallet, ellers blir kolonnen bredere enn skjermen på en telefon
+        return (
+            '<br><span class="liten">+ elbil-lader '
+            f'<span class="nb">{fmt_kwh(p["lader_kwh"])} kWh</span></span>'
+        )
+
     rader = "\n".join(
         f"""      <tr>
         <td>{periodecelle(p)}</td>
-        <td><span class="nb">{fmt_kwh(p["leilighet_kwh"])} kWh</span><br><span class="liten">× {fmt_tall(p["snitt"], 4)} kr/kWh</span></td>
+        <td><span class="nb">{fmt_kwh(p["leilighet_kwh"])} kWh</span><br><span class="liten">× {fmt_tall(p["snitt"], 4)} kr/kWh</span>{ladercelle(p)}</td>
         <td>{fmt_tall(p["belop"], 2)}</td>
         <td><span class="nb">{_status_tekst(p["status"])}</span><br><span class="liten">forfall {fmt_dato(p["forfall"])}</span></td>
       </tr>"""
@@ -192,6 +209,12 @@ def _historikk(synlige: list[dict[str, Any]], ubetalt_sum: float, pdf_base: str 
 
 def _utregning(siste: dict[str, Any] | None) -> str:
     hus = ""
+    lader = ""
+    if siste and har_lader(siste):
+        lader = (
+            "\n  <p>Elbil-laderen har sin egen teller. Forbruket regnes på samme måte og med "
+            "samme snittpris, og vises som egen linje på fakturagrunnlaget.</p>"
+        )
     if siste:
         hus = f"""
   <p>Husets tall for <strong>{_e(maaned_tekst(siste["id"]))}</strong>:</p>
@@ -210,7 +233,7 @@ def _utregning(siste: dict[str, Any] | None) -> str:
   <p>Beløpet er ditt målte strømforbruk (kWh) multiplisert med husets faktiske snittpris
   for samme kalendermåned.</p>
   <p>Husets snittpris er kraft pluss nettleie minus Norgespris, delt på husets samlede kWh.
-  Alle ledd er med, inkludert mva og faste ledd.</p>{hus}
+  Alle ledd er med, inkludert mva og faste ledd.</p>{lader}{hus}
 </details>
 </section>"""
 

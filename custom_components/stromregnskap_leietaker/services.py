@@ -30,7 +30,11 @@ SKJEMA_SLETT = vol.Schema({**PERIODE_PAAKREVD, vol.Required("bekreft"): cv.boole
 SKJEMA_TOM = vol.Schema({})
 SKJEMA_VALGFRI_PERIODE = vol.Schema({vol.Optional("periode"): cv.string})
 SKJEMA_MALERSTAND = vol.Schema(
-    {vol.Required("dato"): cv.string, vol.Required("stand"): vol.Coerce(float)}
+    {
+        vol.Required("dato"): cv.string,
+        vol.Required("stand"): vol.Coerce(float),
+        vol.Optional("maaler", default="leilighet"): vol.In(["leilighet", "lader"]),
+    }
 )
 
 
@@ -81,7 +85,9 @@ async def _merk_betalt(call: ServiceCall) -> None:
 
 
 async def _sett_malerstand(call: ServiceCall) -> None:
-    await _koordinator(call.hass).async_sett_malerstand(call.data["dato"], call.data["stand"])
+    await _koordinator(call.hass).async_sett_malerstand(
+        call.data["dato"], call.data["stand"], call.data["maaler"]
+    )
 
 
 async def _send_regnskap(call: ServiceCall) -> None:

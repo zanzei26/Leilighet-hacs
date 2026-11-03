@@ -16,11 +16,19 @@ from homeassistant.helpers import issue_registry as ir
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator
 from homeassistant.util import dt as dt_util
 
-from .calc import Grenser, auto_status, beregn_belop, forrige_periode_id, maaler_forbruk
+from .calc import (
+    Grenser,
+    auto_status,
+    avrund,
+    beregn_belop,
+    forrige_periode_id,
+    maaler_forbruk,
+)
 from .const import (
     CONF_ADRESSE,
     CONF_ENDRING_MAKS,
     CONF_ENT_IMPORT,
+    CONF_ENT_LADER,
     CONF_ENT_REGNSKAP,
     CONF_FORFALLSDAG,
     CONF_INNFLYTTET,
@@ -48,7 +56,7 @@ from .generering import GenereringMixin, ManglerData
 from .handlinger import HandlingerMixin
 from .kilder import Kilder, bygg_data
 from .live import LiveMixin
-from .maaler import MaalerMixin
+from .maaler import LADER, MaalerMixin
 from .page import render_side
 from .snapshot import SnapshotMixin
 from .storage import Lager
@@ -244,12 +252,41 @@ class StromregnskapCoordinator(
             data["hittil_kilde"] = "maaler"
         else:
             data["hittil_kilde"] = "utility_meter"  # reserve: utility_meter og regnskapssensoren
+        self._legg_til_lader_hittil(data, naa)
         data["datagrunnlag"] = self.vurder_datagrunnlag(naa)
         data["siste_bilde"] = (self.lager.data["snapshots"].get(mnd) or {}).get("tid")
         data["siste_sikkerhetskopi"] = self.lager.siste_kopi
         data["kopimappe"] = self.lager.kopimappe
         data["maalerstander"] = {dato: rad["stand"] for dato, rad in avlesninger}
         return data
+
+    def _legg_til_lader_hittil(self, data: dict[str, Any], naa: datetime) -> None:
+        """Laderen (valgfri) regnes som oppgjøret: telleren nå minus telleren ved månedsskiftet.
+
+        ``kwh_hittil`` og ``kostnad_hittil`` er det leietaker skylder så langt, altså leilighet
+        pluss lader. Delene ligger i egne felt.
+        """
+        data["leilighet_kwh_hittil"] = data["kwh_hittil"]
+        data["lader_kwh_hittil"] = None
+        data["lader_kostnad_hittil"] = None
+        if not self.lader_aktiv:
+            return
+        lader = maaler_forbruk(
+            self._lagret_stand(naa.date().replace(day=1), LADER),
+            self.kilder.float_tilstand(self.cfg[CONF_ENT_LADER]),
+            stand="Laderens teller",
+            enhet="Laderen",
+        )
+        if lader.kwh is None:
+            return
+        data["lader_kwh_hittil"] = lader.kwh
+        if data["kwh_hittil"] is not None:
+            data["kwh_hittil"] = avrund(data["kwh_hittil"] + lader.kwh, 1)
+        if data["snitt_hittil"] is not None:
+            kr = beregn_belop(lader.kwh, data["snitt_hittil"])
+            data["lader_kostnad_hittil"] = kr
+            if data["kostnad_hittil"] is not None:
+                data["kostnad_hittil"] = avrund(data["kostnad_hittil"] + kr, 2)
 
     def _side_ctx(self, naa: datetime, data: dict[str, Any]) -> dict[str, Any]:
         hittil = None
@@ -258,6 +295,8 @@ class StromregnskapCoordinator(
                 "kwh": data["kwh_hittil"],
                 "snitt": data["snitt_hittil"],
                 "kr": data["kostnad_hittil"],
+                "lader_kwh": data["lader_kwh_hittil"],
+                "lader_kr": data["lader_kostnad_hittil"],
             }
         estimat = None
         if data["estimat_kwh"] is not None:

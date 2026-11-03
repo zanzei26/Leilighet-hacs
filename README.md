@@ -30,7 +30,7 @@ Custom integration for Home Assistant som regner ut leietakers månedlige strøm
 ## Oppsett (UI)
 
 1. **Leietaker og utleier:** navn, e-post, adresse, innflyttingsdato, utleiers navn og e-post, kontonummer, forfallsdag (standard 15).
-2. **Datakilder:** de fem sensorene og varslingstjenesten.
+2. **Datakilder:** de fem sensorene og varslingstjenesten. Her kan du også slå på **elbil-laderen** (valgfritt, av som standard) og velge laderens teller. Se «Elbil-lader (valgfritt)».
 3. **E-post (SMTP):** server (standard `smtp.gmail.com`), port (587), brukernavn, app-passord. Innloggingen testes før du kommer videre, og du kan la den sende en test-e-post til utleier. Kopi av hver e-post til utleier er på som standard, og det samme gjelder e-postkopien med PDF og sikkerhetskopi etter hvert oppgjør.
 4. **Leietakerside:** på/av. Lenken vises i skjemaet.
 5. **Rimelighetskontroll og kjøretid:** snittpris min 0,50 / maks 3,00 kr/kWh, maks ±60 % endring i kWh mot forrige periode, kjøring den 3. kl. 08:00 og sjekk til og med den 6.
@@ -51,11 +51,22 @@ Koordinatoren kjører hver time. Fra kjøredagen kl. 08:00 til og med siste sjek
 
 `ikke_betalt` blir automatisk `betalt` fra og med forfallsdagen. `unntak_ikke_betalt` forblir ubetalt til noen setter `betalt` (tillitsbasert, utleier sjekker nettbanken selv).
 
+## Elbil-lader (valgfritt)
+
+Har leietaker en egen elbil-lader som **ikke** går gjennom leilighetens måler, kan den tas med. Slå på «Ta med elbil-lader» under Datakilder og velg laderens **energiteller** (kWh, aldri nullstilt), for eksempel «Levetidsforbruk» fra Easee-integrasjonen. Er den av, er alt som før.
+
+- **Samme metode som leilighetens måler.** Forbruket i en måned er telleren ved månedsskiftet minus telleren ved forrige månedsskifte (begge med én desimal). Telleren lagres rett etter midnatt, hentes ellers fra timesstatistikken, eller legges inn med `sett_malerstand` og `maaler: lader`. Laderens teller har ingen fornuftig startverdi å falle tilbake på. Finnes verken statistikk eller en avlesning, gjettes det ikke: perioden venter på godkjenning, og `binary_sensor.leietaker_datagrunnlag` sier fra.
+- **Samme snittpris, egen linje.** Laderens kWh × husets snittpris regnes for seg og avrundes til hele øre. Beløpet leietaker skal betale er leilighetens beløp pluss laderens beløp (summen av de avrundede linjene, slik at fakturagrunnlaget går opp på papiret). Egne felt på perioden: `lader_kwh`, `lader_belop`, `leilighet_belop`, `lader_start`, `lader_slutt`. `leilighet_kwh` er fortsatt bare leiligheten.
+- **Vises der leietaker ser det.** Egen linje i fakturagrunnlaget (tellerstander, forbruk, utregning), egne kolonner i hele regnskapet, linjer i e-posten, og i historikken på siden. Har laderen 0 kWh i en måned, skjules den på siden og i e-posten (fakturagrunnlaget viser 0,0 kWh).
+- **Kontroller.** Teller som mangler eller går bakover (for eksempel ved lader-bytte), eller leilighet pluss lader over husets forbruk, gir `venter_godkjenning` med forklaring. Beløpet er da regnet uten lader, så du ser det før du godkjenner. Rett tellerne og lag perioden på nytt (slett, så generer). Endringsgrensen mot forrige måned gjelder bare leiligheten, siden lading kommer i rykk.
+- **Live.** `forbruk_hittil` og `kostnad_hittil` er leilighet pluss lader. Delene ligger som attributter (`leilighet_kwh_hittil`, `lader_kwh_hittil`, `lader_kostnad_hittil`), og siden viser «Herav elbil-lader». Månedsestimatet bygger på leilighetens forbruk og tar ikke med laderen.
+- **Ikke med tilbakevirkende kraft.** Perioder som er laget før laderen ble slått på, endres ikke.
+
 ## Datasikkerhet
 
 Målet er at et hull i én kilde aldri gjør at du står uten grunnlag ved månedsskiftet.
 
-- **Målerstander.** Integrasjonen lagrer målerstanden rett etter midnatt ved hvert månedsskifte. Mangler en avlesning (for eksempel fordi Home Assistant var nede), hentes den fra Home Assistants timesstatistikk, eller du legger den inn med handlingen `sett_malerstand`. En lagret avlesning overskrives aldri automatisk. Ved første oppsett lagres startstanden du oppgir, eller statistikken hvis den finnes.
+- **Målerstander.** (Gjelder også laderens teller når den er på, i en egen serie `laderstander`.) Integrasjonen lagrer målerstanden rett etter midnatt ved hvert månedsskifte. Mangler en avlesning (for eksempel fordi Home Assistant var nede), hentes den fra Home Assistants timesstatistikk, eller du legger den inn med handlingen `sett_malerstand`. En lagret avlesning overskrives aldri automatisk. Ved første oppsett lagres startstanden du oppgir, eller statistikken hvis den finnes.
 - **Fast lagring som overlever.** Historikken ligger under en fast nøkkel i `.storage`, uavhengig av config entry. Fjerner du integrasjonen og legger den til igjen, er historikken der fortsatt. Data fra 0.1.x flyttes automatisk.
 - **Rullerende sikkerhetskopier.** Hver endring gir en JSON-kopi i `/config/stromregnskap_leietaker/sikkerhetskopi/` (de 20 nyeste, pluss den nyeste fra hver eldre måned). Kopiene dekkes av vanlige Home Assistant-sikkerhetskopier. Er lagringsfilen borte eller ødelagt, gjenopprettes siste gyldige kopi automatisk i stedet for at integrasjonen starter tom. Feil ved sikkerhetskopiering stopper aldri selve lagringen, men vises i `binary_sensor.leietaker_datagrunnlag`.
 - **Øyeblikksbilde av kildetallene.** Hver sjette time lagres husets tall for måneden som pågår. Mister regnskapssensoren en måned før oppgjøret lages, brukes siste bilde som reserve. **Et oppgjør bygd på et øyeblikksbilde sendes aldri automatisk**, det venter alltid på din godkjenning.
@@ -117,7 +128,7 @@ Estimatet er forrige periodes leilighets-kWh × (1 + `endring_prosent`/100), pri
 | `stromregnskap_leietaker.send_lenke` | | Sender en kort e-post til leietaker med lenken til siden. |
 | `stromregnskap_leietaker.send_regnskap` | `periode` (valgfri) | Sender deg en e-post med fakturagrunnlag (siste periode hvis ingen er valgt), hele regnskapet og JSON-sikkerhetskopi. |
 | `stromregnskap_leietaker.merk_betalt` | `periode` (valgfri) | Merker utestående oppgjør som betalt. Uten periode: alle utestående. |
-| `stromregnskap_leietaker.sett_malerstand` | `dato` (første dag i måneden), `stand` (kWh) | Legger inn eller retter målerstanden ved et månedsskifte. |
+| `stromregnskap_leietaker.sett_malerstand` | `dato` (første dag i måneden), `stand` (kWh), `maaler` (`leilighet`, standard, eller `lader`) | Legger inn eller retter målerstanden ved et månedsskifte. |
 | `stromregnskap_leietaker.sett_status` | `periode`, `status` | `betalt`, `ikke_betalt` eller `unntak_ikke_betalt`. |
 | `stromregnskap_leietaker.publiser_side` | | Lager siden på nytt nå. |
 | `stromregnskap_leietaker.slett_periode` | `periode`, `bekreft: true` | Sletter en periode. Et sendt oppgjør er låst og kan bare fjernes slik. |
@@ -129,7 +140,7 @@ Estimatet er forrige periodes leilighets-kWh × (1 + `endring_prosent`/100), pri
 
 ## Datamodell
 
-Lagres med Home Assistants `Store` (`stromregnskap_leietaker.<entry_id>`, versjonert med migrering). Hver periode har `id`, `start`, `slutt`, `leilighet_kwh`, `hus_kwh`, `kraft`, `nettleie`, `norgespris`, `sum`, `snitt`, `belop`, `forfall`, `status`, `generert`, `epost_sendt`, `kilde` og `notat`.
+Lagres med Home Assistants `Store` (`stromregnskap_leietaker.<entry_id>`, versjonert med migrering). Hver periode har `id`, `start`, `slutt`, `leilighet_kwh`, `hus_kwh`, `kraft`, `nettleie`, `norgespris`, `sum`, `snitt`, `belop`, `forfall`, `status`, `generert`, `epost_sendt`, `kilde` og `notat`. Med elbil-lader på kommer i tillegg `leilighet_belop`, `lader_kwh`, `lader_belop`, `lader_start` og `lader_slutt`, og `belop` er da totalen.
 
 Tillegg utover den opprinnelige skissen:
 

@@ -40,7 +40,7 @@ SKJEMAER = {
 }
 FEILKODER = {
     "ugyldig_epost", "paakrevd", "tjeneste_finnes_ikke", "snitt_grense",
-    "kjoredag_rekkefolge", "smtp_auth", "smtp_connect", "smtp_send",
+    "kjoredag_rekkefolge", "smtp_auth", "smtp_connect", "smtp_send", "lader_mangler",
 }  # fmt: skip
 TJENESTER = {
     "generer_oppgjor": {"periode", "tving", "send_epost"},
@@ -52,7 +52,7 @@ TJENESTER = {
     "ny_leietaker": set(),
     "send_lenke": set(),
     "merk_betalt": {"periode"},
-    "sett_malerstand": {"dato", "stand"},
+    "sett_malerstand": {"dato", "stand", "maaler"},
     "send_regnskap": {"periode"},
 }
 
