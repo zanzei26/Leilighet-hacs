@@ -136,3 +136,65 @@ async def test_leietaker_og_utleier_lagres_sammen_med_perioder(
     data = entry.runtime_data.lager.data
     assert data["leietaker"]["navn"] == "Kari Nordmann"
     assert data["utleier"]["kontonummer"] == "1234.56.78903"
+
+
+async def test_lenken_er_en_egen_sensor_og_en_knapp_sender_den(
+    hass, hass_storage, tmp_path, freezer
+):
+    from unittest.mock import patch as _patch
+
+    with _patch("custom_components.stromregnskap_leietaker.epost.send_epost") as epost:
+        await _sett_opp(hass, tmp_path, freezer)
+        lenke = hass.states.get("sensor.leietaker_lenke")
+        assert lenke.state == "https://eksempel.ui.nabu.casa/local/testslug123/index.html"
+        assert hass.states.get("button.leietaker_send_lenke") is not None
+        await hass.services.async_call(
+            "button", "press", {"entity_id": "button.leietaker_send_lenke"}, blocking=True
+        )
+        assert epost.call_count == 1
+        assert "kari@example.com" in epost.call_args.kwargs["melding"]["To"]
+
+
+async def test_lenke_sensoren_er_ukjent_naar_siden_ikke_publiseres(
+    hass, hass_storage, tmp_path, freezer
+):
+    await _sett_opp(hass, tmp_path, freezer, publiser_side=False)
+    assert hass.states.get("sensor.leietaker_lenke").state == "unknown"
+
+
+async def test_entitetene_samles_paa_en_enhet_og_navnene_dobles_ikke(
+    hass, hass_storage, tmp_path, freezer
+):
+    from homeassistant.helpers import device_registry as dr
+    from homeassistant.helpers import entity_registry as er
+
+    entry = await _sett_opp(hass, tmp_path, freezer)
+    ent = er.async_get(hass)
+    ider = {e.entity_id for e in er.async_entries_for_config_entry(ent, entry.entry_id)}
+    assert ider == {
+        "sensor.leietaker_utestaende",
+        "sensor.leietaker_siste_oppgjor",
+        "sensor.leietaker_forbruk_hittil",
+        "sensor.leietaker_kostnad_hittil",
+        "sensor.leietaker_estimat_maned",
+        "sensor.leietaker_side_sist_publisert",
+        "sensor.leietaker_lenke",
+        "binary_sensor.leietaker_oppgjor_venter_godkjenning",
+        "button.leietaker_send_lenke",
+        "button.leietaker_merk_som_betalt",
+    }
+    assert hass.states.get("sensor.leietaker_utestaende").name == "Leietaker Utestående"
+    assert hass.states.get("button.leietaker_send_lenke").name == "Leietaker Send lenke"
+    enheter = dr.async_entries_for_config_entry(dr.async_get(hass), entry.entry_id)
+    assert len(enheter) == 1 and enheter[0].name == "Leietaker"
+
+
+async def test_knappen_merk_som_betalt_oppdaterer_utestaaende(
+    hass, hass_storage, tmp_path, freezer
+):
+    await _sett_opp(hass, tmp_path, freezer)
+    assert hass.states.get("sensor.leietaker_utestaende").state == "304.25"
+    await hass.services.async_call(
+        "button", "press", {"entity_id": "button.leietaker_merk_som_betalt"}, blocking=True
+    )
+    assert hass.states.get("sensor.leietaker_utestaende").state == "0.0"

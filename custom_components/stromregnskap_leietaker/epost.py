@@ -14,6 +14,7 @@ from homeassistant.util import dt as dt_util
 from .calc import STATUS_VENTER
 from .const import (
     CONF_CC_UTLEIER,
+    CONF_PUBLISER_SIDE,
     CONF_SMTP_BRUKER,
     CONF_SMTP_HOST,
     CONF_SMTP_PASSORD,
@@ -21,7 +22,7 @@ from .const import (
     EPOST_MAKS_TIMER,
 )
 from .generering import sammendrag
-from .mail import SmtpFeil, bygg_epost, send_epost
+from .mail import SmtpFeil, bygg_epost, bygg_lenkepost, send_epost
 from .varsler import ISSUE_EPOST
 
 _LOGGER = logging.getLogger(__name__)
@@ -29,6 +30,47 @@ _LOGGER = logging.getLogger(__name__)
 
 class EpostMixin:
     """Metoder for StromregnskapCoordinator."""
+
+    async def _send_melding(self, melding) -> None:
+        """Sender en ferdig bygget melding via SMTP i executor. Kaster SmtpFeil."""
+        c = self.cfg
+        await self.hass.async_add_executor_job(
+            partial(
+                send_epost,
+                host=c[CONF_SMTP_HOST],
+                port=int(c[CONF_SMTP_PORT]),
+                brukernavn=c[CONF_SMTP_BRUKER],
+                passord=c[CONF_SMTP_PASSORD],
+                melding=melding,
+            )
+        )
+
+    async def async_send_lenke(self) -> None:
+        """Sender en kort e-post til leietaker med lenken til leietakersiden."""
+        if not self.cfg.get(CONF_PUBLISER_SIDE):
+            raise ServiceValidationError(
+                "Leietakersiden er slått av. Slå den på under Konfigurer → Leietakerside først."
+            )
+        url = self.side_url
+        if url is None:
+            raise ServiceValidationError(
+                "Home Assistant kjenner ingen ekstern adresse å lage lenken av. "
+                "Slå på Nabu Casa eller sett ekstern URL, og prøv igjen."
+            )
+        melding = bygg_lenkepost(
+            leietaker=self.leietaker,
+            utleier=self.utleier,
+            side_url=url,
+            cc_utleier=bool(self.cfg.get(CONF_CC_UTLEIER, True)),
+        )
+        try:
+            await self._send_melding(melding)
+        except SmtpFeil as err:
+            _LOGGER.warning("Lenken kunne ikke sendes (%s): %s", err.kind, err)
+            raise HomeAssistantError(f"Lenken kunne ikke sendes ({err.kind}): {err}") from err
+        await self.varsler.varsle(
+            "Lenke sendt", f"Lenken til leietakersiden er sendt til {self.leietaker['epost']}."
+        )
 
     async def _send_epost(self, p: dict[str, Any], naa: datetime) -> SmtpFeil | None:
         """Sender oppgjøret. Returnerer None ved suksess, ellers feilen."""
@@ -42,16 +84,7 @@ class EpostMixin:
             cc_utleier=bool(c.get(CONF_CC_UTLEIER, True)),
         )
         try:
-            await self.hass.async_add_executor_job(
-                partial(
-                    send_epost,
-                    host=c[CONF_SMTP_HOST],
-                    port=int(c[CONF_SMTP_PORT]),
-                    brukernavn=c[CONF_SMTP_BRUKER],
-                    passord=c[CONF_SMTP_PASSORD],
-                    melding=melding,
-                )
-            )
+            await self._send_melding(melding)
         except SmtpFeil as err:
             _LOGGER.warning("E-post for oppgjør %s feilet (%s): %s", p["id"], err.kind, err)
             if not p.get("epost_ventende_siden"):
