@@ -101,7 +101,7 @@ Tillegg utover den opprinnelige skissen:
 
 Dette er avvik og ting som ikke er gjort. Det er viktig å se på dem før integrasjonen tas i bruk.
 
-1. **September: 302,79 kr stemmer ikke med regnestykket.** 228,0 × 1,3280 = 302,784, som med vanlig avrunding gir 302,78. Perioden importeres med det faktisk fakturerte beløpet (302,79), og tallet regnes ikke om. Fremtidige oppgjør rundes halvt øre opp. Er det en annen avrundingsregel som er brukt (for eksempel alltid opp), må `beregn_belop` i `calc.py` endres.
+1. **September: 302,79 kr (avklart).** 228,0 × 1,3280 = 302,784, så det oppgitte beløpet stemmer ikke helt med regnestykket. Vanlig avrunding gjelder (halvt øre opp). Perioden importeres med det faktisk fakturerte beløpet, 302,79 kr, og regnes ikke om.
 2. **Kryssjekken mot `sensor.minusmaler_leilighet_import` er ikke bygget.** Den rå måleren er akkumulert fra 01.11.2026 og er bare lik utility_meter i første måned, så en enkel sammenligning ville gitt falske alarmer fra desember. Verdien eksponeres som attributt (`maaler_total_kwh`). Hva slags sjekk som ønskes, bør avklares.
 3. **Ikke testet mot ekte Home Assistant eller ekte Gmail.** Sensorformene er lest fra den levende instansen, og alt annet er testet med mocket SMTP. Kjør `send_epost_pa_nytt` og test-e-posten i oppsettet, og åpne lenken fra mobil utenfor hjemmenettet (se «Overgang» under).
 4. **Hvis du hopper over historikkimporten**, vil første kjøring prøve å lage oppgjør for forrige måned og sende det til leietaker.
