@@ -1,0 +1,39 @@
+name: Utgivelse
+
+# Lager en GitHub-utgivelse (som HACS kan installere) når en tag som v0.1.0 pushes.
+# Kan også kjøres manuelt med en versjon, da lages taggen fra gjeldende commit.
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      versjon:
+        description: "Versjon, for eksempel v0.1.0 (må samsvare med manifest.json)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  utgivelse:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.versjon || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sjekk at taggen samsvarer med versjonen i manifest.json
+        run: |
+          versjon=$(python3 -c "import json; print(json.load(open('custom_components/stromregnskap_leietaker/manifest.json'))['version'])")
+          if [ "v${versjon}" != "${TAG}" ]; then
+            echo "Taggen ${TAG} samsvarer ikke med manifest-versjonen v${versjon}" >&2
+            exit 1
+          fi
+      - name: Lag utgivelse
+        run: |
+          gh release create "${TAG}" \
+            --target "${GITHUB_SHA}" \
+            --title "${TAG}" \
+            --generate-notes \
+            --notes "Installeres via HACS som egendefinert repository. Se README for oppsett og åpne punkter."
