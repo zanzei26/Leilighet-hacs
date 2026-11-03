@@ -31,7 +31,7 @@ Custom integration for Home Assistant som regner ut leietakers månedlige strøm
 
 1. **Leietaker og utleier:** navn, e-post, adresse, innflyttingsdato, utleiers navn og e-post, kontonummer, forfallsdag (standard 15).
 2. **Datakilder:** de fem sensorene og varslingstjenesten.
-3. **E-post (SMTP):** server (standard `smtp.gmail.com`), port (587), brukernavn, app-passord. Innloggingen testes før du kommer videre, og du kan la den sende en test-e-post til utleier. Kopi til utleier er på som standard.
+3. **E-post (SMTP):** server (standard `smtp.gmail.com`), port (587), brukernavn, app-passord. Innloggingen testes før du kommer videre, og du kan la den sende en test-e-post til utleier. Kopi av hver e-post til utleier er på som standard, og det samme gjelder e-postkopien med PDF og sikkerhetskopi etter hvert oppgjør.
 4. **Leietakerside:** på/av. Lenken vises i skjemaet.
 5. **Rimelighetskontroll og kjøretid:** snittpris min 0,50 / maks 3,00 kr/kWh, maks ±60 % endring i kWh mot forrige periode, kjøring den 3. kl. 08:00 og sjekk til og med den 6.
 6. **Eksisterende historikk:** importerer september (30.08–30.09) og oktober 2026 slik de er fakturert.
@@ -44,7 +44,7 @@ Koordinatoren kjører hver time. Fra kjøredagen kl. 08:00 til og med siste sjek
 
 1. `sensor.jarvis_stromregnskap` må ha et element i `maneder` med riktig `mnd` og komplette tall for huset. Ellers prøves det igjen hver time. På siste sjekkdag kl. 08:00 får utleier ett varsel og en Repairs-melding.
 2. **Leilighetens kWh er målerstanden ved månedsskiftet minus målerstanden ved forrige månedsskifte**, slik man regnet før. Regnskapssensorens `leilighet_kwh` og utility_meterens `last_period` brukes som kontroll. Avviker noen av dem mer enn 0,5 kWh, eller mangler en av målerstandene, sendes ikke oppgjøret. Utleier får alle tallene og må godkjenne.
-3. Beløp = kWh × snittpris, avrundet til hele øre (halvt øre rundes opp).
+3. **Avrunding:** kWh og målerstander vises og regnes med én desimal (halvt opp). Beløp regnes fra det avrundede forbruket × snittprisen og avrundes til hele øre (halvt øre opp). Snittprisen beholder fire desimaler (kr/kWh), slik at regnestykket på fakturagrunnlaget går opp.
 4. **Rimelighetskontroll** (snittpris innenfor grensene, 0 < leilighet ≤ hus, endring mot forrige periode innenfor grensen). Ved brudd får perioden status `venter_godkjenning`, utleier får varsel med tallene og hvilken regel som slo ut, og en Repairs-melding med «Godkjenn». Ingenting sendes, og perioden vises ikke på siden.
 5. Ellers lagres perioden, siden oppdateres, og e-post sendes (kopi til utleier). Utleier får et kort push-varsel.
 6. Feiler e-posten, beholdes perioden og det prøves igjen hver time i 48 timer. Utleier varsles én gang, og deretter kommer en Repairs-melding med «Send på nytt».
@@ -64,6 +64,18 @@ Målet er at et hull i én kilde aldri gjør at du står uten grunnlag ved måne
 
 Gjenoppretting skjer automatisk bare når lagringen mangler eller er ødelagt. Det finnes ingen handling for å gå tilbake til en bestemt kopi. Vil du det, kan du stoppe Home Assistant, erstatte feltet `data` i `.storage/stromregnskap_leietaker` med feltet `data` fra den kopien du vil tilbake til, og starte igjen. Filene har samme form, og du bør ta en ekstra kopi av begge først.
 
+## Fakturagrunnlag og regnskap (PDF)
+
+Alt er ferdig utregnet, med utregningen synlig, slik at både du og leietaker kan kontrollere tallene uten å regne selv.
+
+- **Fakturagrunnlag per måned** (én side): parter, periode, målerstand ved start og slutt, ditt forbruk, husets kostnader (kraft, nettleie, Norgespris, sum, husets forbruk og snittpris), utregningen `kWh × snittpris = beløp`, betalingsinformasjon og status.
+- **Hele regnskapet fra start**: sammendrag (totalt fakturert, betalt, utestående), alle oppgjør, og husets kostnader per måned. Lange regnskap fortsetter på flere sider med overskriften gjentatt.
+- **Leietaker** har knapper på siden sin: «Last ned PDF» under hver måned, og «Last ned hele regnskapet (PDF)». PDF-ene bygges ferskt ved hver nedlasting, krever ingen innlogging (som siden, bak den hemmelige lenken), og oppgjør som venter på godkjenning er ikke med.
+- **Utleier** får en **kopi på e-post** etter hvert oppgjør (kan slås av under Konfigurer → E-post). Emnet er «Fakturagrunnlag strøm leilighet – <måned år>». Vedlagt er fakturagrunnlaget, hele regnskapet og en **JSON-sikkerhetskopi** av alle data. Det er en kopi utenfor Home Assistant som ikke forsvinner. Du kan også trykke «Send regnskap» (eller bruke handlingen `send_regnskap`) når som helst.
+- Lenkene til PDF-ene står som attributter på `sensor.leietaker_lenke`.
+
+PDF-ene lages av en egen liten skriver uten eksterne biblioteker, så det er ingenting ekstra som må installeres.
+
 ## Leietakersiden
 
 Integrasjonen skriver én selvstendig HTML-fil (ingen JavaScript, ingen eksterne ressurser, `noindex`, lys/mørk modus) til `/config/www/<hemmelig-slug>/index.html` hver time og ved alle endringer. Lenken er `https://<nabu-casa-id>.ui.nabu.casa/local/<slug>/index.html` (Nabu Casa først, ellers ekstern/intern URL).
@@ -82,11 +94,12 @@ Alle entitetene ligger på én enhet, «Leietaker».
 | `sensor.leietaker_kostnad_hittil` | Kostnad hittil (kr). |
 | `sensor.leietaker_estimat_maned` | Månedsestimat (kr). Attributt: kWh. |
 | `sensor.leietaker_side_sist_publisert` | Tidsstempel. Attributt: lenke. |
-| `sensor.leietaker_lenke` | Leietakerlenken, slik at du kan se og kopiere den. Ukjent hvis siden ikke publiseres. |
+| `sensor.leietaker_lenke` | Leietakerlenken, slik at du kan se og kopiere den. Ukjent hvis siden ikke publiseres. Attributter: lenker til regnskapet og siste fakturagrunnlag (PDF). |
 | `binary_sensor.leietaker_oppgjor_venter_godkjenning` | `on` når en periode venter på godkjenning. |
 | `binary_sensor.leietaker_datagrunnlag` | `on` (problem) hvis noe hindrer at neste oppgjør kan lages trygt. Attributter: problemene, siste målerstander, siste øyeblikksbilde og sikkerhetskopi. |
 | `button.leietaker_send_lenke` | Sender en kort e-post til leietaker med bare lenken. |
 | `button.leietaker_merk_som_betalt` | Merker alle utestående oppgjør som betalt. |
+| `button.leietaker_send_regnskap` | Sender deg en e-post med fakturagrunnlag, regnskap (PDF) og JSON-sikkerhetskopi. |
 
 Estimatet er forrige periodes leilighets-kWh × (1 + `endring_prosent`/100), priset til forrige periodes snittpris. «Hittil»-tall fra regnskapssensoren brukes bare når den faktisk viser inneværende måned.
 
@@ -100,6 +113,7 @@ Estimatet er forrige periodes leilighets-kWh × (1 + `endring_prosent`/100), pri
 | `stromregnskap_leietaker.godkjenn_oppgjor` | `periode` | Sender et oppgjør som venter på godkjenning. |
 | `stromregnskap_leietaker.send_epost_pa_nytt` | `periode` | Sender oppgjøret på e-post på nytt. |
 | `stromregnskap_leietaker.send_lenke` | | Sender en kort e-post til leietaker med lenken til siden. |
+| `stromregnskap_leietaker.send_regnskap` | `periode` (valgfri) | Sender deg en e-post med fakturagrunnlag (siste periode hvis ingen er valgt), hele regnskapet og JSON-sikkerhetskopi. |
 | `stromregnskap_leietaker.merk_betalt` | `periode` (valgfri) | Merker utestående oppgjør som betalt. Uten periode: alle utestående. |
 | `stromregnskap_leietaker.sett_malerstand` | `dato` (første dag i måneden), `stand` (kWh) | Legger inn eller retter målerstanden ved et månedsskifte. |
 | `stromregnskap_leietaker.sett_status` | `periode`, `status` | `betalt`, `ikke_betalt` eller `unntak_ikke_betalt`. |
@@ -133,7 +147,8 @@ Dette er avvik og ting som ikke er gjort. Det er viktig å se på dem før integ
 6. **App-passordet ligger i klartekst i config entry.**
 7. **Uthenting av målerstand fra statistikken er best effort og ikke verifisert mot en ekte Home Assistant.** Den brukes bare som reserve hvis integrasjonen ikke var oppe ved midnatt. Virker den ikke, får du «målerstand mangler» i `binary_sensor.leietaker_datagrunnlag`, og du legger inn tallet med `sett_malerstand`.
 8. **Etter oppdatering til 0.2.0:** sjekk under Konfigurer → Datakilder at «Målerstand ved start av denne måneden» er riktig (0 hvis måleren startet på 0), og at `binary_sensor.leietaker_datagrunnlag` er `off`.
-9. **Ingen kopi utenfor Home Assistant ennå.** Sikkerhetskopiene ligger på samme maskin. En månedlig e-post med hele regnskapet kommer i 0.3.0.
+9. **Kopien utenfor Home Assistant avhenger av e-post.** Den kommer bare hvis e-posten til leietaker først gikk gjennom, og feiler kopien, får du et varsel (oppgjøret stoppes ikke). Sjekk at e-postene kommer frem de første månedene.
+10. **PDF-ene er ikke åpnet i alle lesere.** Layout er kontrollert visuelt og teksten er verifisert med en uavhengig leser (pypdf), men de er ikke prøvd i for eksempel en mobil-PDF-leser.
 
 ## Overgang fra Claude-oppgavene
 

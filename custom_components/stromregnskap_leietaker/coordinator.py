@@ -42,6 +42,7 @@ from .datagrunnlag import DatagrunnlagMixin
 from .eksport import EksportMixin
 from .epost import EpostMixin
 from .filer import skriv_atomisk
+from .filnavn import REGNSKAPSNAVN, fakturanavn
 from .generering import GenereringMixin, ManglerData
 from .handlinger import HandlingerMixin
 from .kilder import Kilder, bygg_data
@@ -49,7 +50,7 @@ from .maaler import MaalerMixin
 from .page import render_side
 from .snapshot import SnapshotMixin
 from .storage import Lager
-from .url import bygg_side_url
+from .url import bygg_pdf_url, bygg_side_url
 from .varsler import ISSUE_ETTERSLEP, ISSUE_MANGLER, Varsler
 
 _LOGGER = logging.getLogger(__name__)
@@ -219,6 +220,15 @@ class StromregnskapCoordinator(
         )
         mnd = f"{naa.year}-{naa.month:02d}"
         avlesninger = sorted(self.lager.data["maalerstander"].items())[-6:]
+        slug = self.cfg[CONF_SLUG]
+        publisert = bool(self.cfg.get(CONF_PUBLISER_SIDE))
+        siste = data["siste"]
+        data["regnskap_pdf_url"] = (
+            bygg_pdf_url(self.hass, slug, REGNSKAPSNAVN) if publisert else None
+        )
+        data["siste_faktura_pdf_url"] = (
+            bygg_pdf_url(self.hass, slug, fakturanavn(siste["id"])) if publisert and siste else None
+        )
         data["datagrunnlag"] = self.vurder_datagrunnlag(naa)
         data["siste_bilde"] = (self.lager.data["snapshots"].get(mnd) or {}).get("tid")
         data["siste_sikkerhetskopi"] = self.lager.siste_kopi

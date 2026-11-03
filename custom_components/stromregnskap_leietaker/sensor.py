@@ -118,6 +118,10 @@ SENSORER: tuple[StromSensorBeskrivelse, ...] = (
         name="Lenke",
         icon="mdi:link-variant",
         verdi=lambda d: d["side_url"],
+        attributter=lambda d: {
+            "regnskap_pdf": d["regnskap_pdf_url"],
+            "siste_faktura_pdf": d["siste_faktura_pdf_url"],
+        },
     ),
 )
 

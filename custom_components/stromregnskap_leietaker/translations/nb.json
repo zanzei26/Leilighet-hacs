@@ -56,7 +56,8 @@
           "smtp_bruker": "Brukernavn",
           "smtp_passord": "App-passord",
           "cc_utleier": "Send kopi til utleier",
-          "send_test": "Send test-e-post til utleier nå"
+          "send_test": "Send test-e-post til utleier nå",
+          "kopi_til_utleier": "Send kopi med PDF og sikkerhetskopi til utleier etter hvert oppgjør"
         },
         "data_description": {
           "smtp_host": "Adressen til e-postserveren. For Gmail: smtp.gmail.com.",
@@ -64,7 +65,8 @@
           "smtp_bruker": "Brukernavnet på e-postkontoen, vanligvis hele e-postadressen. Foreslås fra utleiers e-post.",
           "smtp_passord": "App-passordet på 16 tegn fra Google, ikke det vanlige Google-passordet. Mellomrom i passordet gjør ikke noe.",
           "cc_utleier": "Sender en kopi av hvert oppgjør til utleiers e-postadresse, så du ser nøyaktig hva leietaker får.",
-          "send_test": "Sender en prøve-e-post til utleiers adresse når du går videre, for å vise at innloggingen virker. Ingenting sendes til leietaker nå."
+          "send_test": "Sender en prøve-e-post til utleiers adresse når du går videre, for å vise at innloggingen virker. Ingenting sendes til leietaker nå.",
+          "kopi_til_utleier": "Etter at oppgjøret er sendt til leietaker, får utleier en e-post med emnet «Fakturagrunnlag strøm leilighet». Vedlagt er fakturagrunnlaget og hele regnskapet som PDF, og en sikkerhetskopi av alle data (JSON). Det gir en kopi utenfor Home Assistant."
         }
       },
       "side": {
@@ -206,7 +208,8 @@
           "smtp_bruker": "Brukernavn",
           "smtp_passord": "App-passord",
           "cc_utleier": "Send kopi til utleier",
-          "send_test": "Send test-e-post til utleier nå"
+          "send_test": "Send test-e-post til utleier nå",
+          "kopi_til_utleier": "Send kopi med PDF og sikkerhetskopi til utleier etter hvert oppgjør"
         },
         "data_description": {
           "smtp_host": "Adressen til e-postserveren. For Gmail: smtp.gmail.com.",
@@ -214,7 +217,8 @@
           "smtp_bruker": "Brukernavnet på e-postkontoen, vanligvis hele e-postadressen. Foreslås fra utleiers e-post.",
           "smtp_passord": "La stå tomt for å beholde gjeldende app-passord. Fyll inn bare hvis du har laget et nytt.",
           "cc_utleier": "Sender en kopi av hvert oppgjør til utleiers e-postadresse, så du ser nøyaktig hva leietaker får.",
-          "send_test": "Sender en prøve-e-post til utleiers adresse når du går videre, for å vise at innloggingen virker. Ingenting sendes til leietaker nå."
+          "send_test": "Sender en prøve-e-post til utleiers adresse når du går videre, for å vise at innloggingen virker. Ingenting sendes til leietaker nå.",
+          "kopi_til_utleier": "Etter at oppgjøret er sendt til leietaker, får utleier en e-post med emnet «Fakturagrunnlag strøm leilighet». Vedlagt er fakturagrunnlaget og hele regnskapet som PDF, og en sikkerhetskopi av alle data (JSON). Det gir en kopi utenfor Home Assistant."
         }
       },
       "side": {
@@ -414,6 +418,16 @@
         "stand": {
           "name": "Målerstand (kWh)",
           "description": "Det måleren viste ved månedsskiftet."
+        }
+      }
+    },
+    "send_regnskap": {
+      "name": "Send regnskap til meg",
+      "description": "Sender en e-post til deg som utleier med fakturagrunnlaget for en periode, hele regnskapet (PDF) og en JSON-sikkerhetskopi som vedlegg. Uten periode brukes siste oppgjør.",
+      "fields": {
+        "periode": {
+          "name": "Periode",
+          "description": "Måneden som ÅÅÅÅ-MM. La stå tomt for siste oppgjør."
         }
       }
     }

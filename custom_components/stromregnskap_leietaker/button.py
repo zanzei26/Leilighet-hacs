@@ -16,7 +16,11 @@ async def async_setup_entry(
 ) -> None:
     koordinator = entry.runtime_data.coordinator
     async_add_entities(
-        [SendLenkeKnapp(koordinator, entry.entry_id), MerkBetaltKnapp(koordinator, entry.entry_id)]
+        [
+            SendLenkeKnapp(koordinator, entry.entry_id),
+            MerkBetaltKnapp(koordinator, entry.entry_id),
+            SendRegnskapKnapp(koordinator, entry.entry_id),
+        ]
     )
 
 
@@ -50,3 +54,14 @@ class MerkBetaltKnapp(_Knapp):
 
     async def async_press(self) -> None:
         await self.coordinator.async_merk_betalt()
+
+
+class SendRegnskapKnapp(_Knapp):
+    """Sender en kopi med fakturagrunnlag, regnskap og sikkerhetskopi til utleier."""
+
+    _noekkel = "send_regnskap"
+    _attr_name = "Send regnskap"
+    _attr_icon = "mdi:file-send-outline"
+
+    async def async_press(self) -> None:
+        await self.coordinator.async_send_kopi()

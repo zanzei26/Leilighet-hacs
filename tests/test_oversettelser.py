@@ -53,6 +53,7 @@ TJENESTER = {
     "send_lenke": set(),
     "merk_betalt": {"periode"},
     "sett_malerstand": {"dato", "stand"},
+    "send_regnskap": {"periode"},
 }
 
 

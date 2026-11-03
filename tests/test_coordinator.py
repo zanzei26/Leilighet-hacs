@@ -529,3 +529,119 @@ async def test_merk_betalt_for_periode_som_ikke_er_utestaaende_eller_finnes_ikke
         await o.coordinator.async_merk_betalt("2026-09")  # allerede betalt
     with pytest.raises(ServiceValidationError):
         await o.coordinator.async_merk_betalt("2099-01")
+
+
+# --- kopi til utleier ---------------------------------------------------------------
+
+
+def _kopi_paa(hass, o):
+    hass.config_entries.async_update_entry(o.entry, data={**o.entry.data, "kopi_til_utleier": True})
+
+
+def _vedlegg(msg):
+    return {d.get_filename(): d for d in msg.iter_attachments()}
+
+
+async def test_kopi_sendes_til_utleier_etter_utsending_til_leietaker(hass, oppsett):
+    import io
+    import json as jsonlib
+
+    from pypdf import PdfReader
+
+    o = oppsett
+    _kopi_paa(hass, o)
+    await o.coordinator.async_refresh()
+    assert o.epost.call_count == 2
+    til_leietaker, kopi = (c.kwargs["melding"] for c in o.epost.call_args_list)
+    assert "kari@example.com" in til_leietaker["To"]
+    assert "ola@example.com" in kopi["To"] and "kari@example.com" not in kopi["To"]
+    assert kopi["Subject"] == "Fakturagrunnlag strøm leilighet – november 2026"
+
+    v = _vedlegg(kopi)
+    assert sorted(v) == [
+        "fakturagrunnlag-strom-leilighet-2026-11.pdf",
+        "regnskap-strom-leilighet.pdf",
+        "stromregnskap-sikkerhetskopi-20261203.json",
+    ]
+    faktura = "\n".join(
+        s.extract_text()
+        for s in PdfReader(
+            io.BytesIO(v["fakturagrunnlag-strom-leilighet-2026-11.pdf"].get_content())
+        ).pages
+    )
+    assert "310,00" in faktura and "november 2026" in faktura
+    sikkerhet = jsonlib.loads(v["stromregnskap-sikkerhetskopi-20261203.json"].get_content())
+    assert [p["id"] for p in sikkerhet["data"]["perioder"]] == ["2026-09", "2026-10", "2026-11"]
+    assert "2026-12-01" in sikkerhet["data"]["maalerstander"]
+
+
+async def test_ingen_kopi_naar_den_er_slaatt_av(hass, oppsett):
+    o = oppsett  # CFG har kopi_til_utleier: False
+    await o.coordinator.async_refresh()
+    assert o.epost.call_count == 1
+
+
+async def test_kopi_er_paa_som_standard_for_oppsett_uten_valget(hass, oppsett):
+    o = oppsett
+    data = {k: v for k, v in o.entry.data.items() if k != "kopi_til_utleier"}
+    hass.config_entries.async_update_entry(o.entry, data=data)
+    await o.coordinator.async_refresh()
+    assert o.epost.call_count == 2
+
+
+async def test_ingen_kopi_hvis_utsendingen_til_leietaker_feiler(hass, oppsett):
+    o = oppsett
+    _kopi_paa(hass, o)
+    o.epost.side_effect = SmtpFeil("connect", "nede")
+    await o.coordinator.async_refresh()
+    assert o.epost.call_count == 1  # bare forsøket til leietaker
+
+
+async def test_feil_paa_kopien_stopper_ikke_oppgjoeret_og_varsler_en_gang(hass, oppsett):
+    o = oppsett
+    _kopi_paa(hass, o)
+    o.epost.side_effect = [None, SmtpFeil("connect", "nede")]
+    await o.coordinator.async_refresh()
+    p = o.lager.finn("2026-11")
+    assert p["epost_sendt"] is not None  # oppgjøret er sendt
+    feilvarsler = [c for c in o.varsler if "Kopi" in c.data["title"]]
+    assert len(feilvarsler) == 1
+
+
+async def test_manuell_kopi_for_siste_periode(hass, oppsett):
+    o = oppsett
+    await o.coordinator.async_send_kopi()
+    kopi = o.epost.call_args.kwargs["melding"]
+    assert kopi["Subject"] == "Fakturagrunnlag strøm leilighet – oktober 2026"
+    assert "fakturagrunnlag-strom-leilighet-2026-10.pdf" in _vedlegg(kopi)
+
+
+async def test_manuell_kopi_for_bestemt_periode_selv_om_automatisk_kopi_er_av(hass, oppsett):
+    o = oppsett
+    await o.coordinator.async_send_kopi("2026-09")
+    assert o.epost.call_count == 1
+    assert "september 2026" in o.epost.call_args.kwargs["melding"]["Subject"]
+
+
+async def test_manuell_kopi_som_feiler_gir_kjoretidsfeil(hass, oppsett):
+    o = oppsett
+    o.epost.side_effect = SmtpFeil("auth", "avvist")
+    with pytest.raises(HomeAssistantError) as exc:
+        await o.coordinator.async_send_kopi()
+    assert not isinstance(exc.value, ServiceValidationError)
+
+
+async def test_kopi_uten_perioder_eller_for_ugyldig_og_ventende_periode_gir_valideringsfeil(
+    hass, oppsett
+):
+    o = oppsett
+    with pytest.raises(ServiceValidationError):
+        await o.coordinator.async_send_kopi("2099-01")
+    sett_kilder(hass, maneder=[SEP_HUS, OKT_HUS, {**NOV_HUS, "snitt": 3.5}])
+    await o.coordinator.async_refresh()  # november havner i venter_godkjenning
+    with pytest.raises(ServiceValidationError):
+        await o.coordinator.async_send_kopi("2026-11")
+    for p in list(o.lager.perioder):
+        o.lager.fjern(p["id"])
+    with pytest.raises(ServiceValidationError):
+        await o.coordinator.async_send_kopi()
