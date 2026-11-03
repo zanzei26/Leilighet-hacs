@@ -27,6 +27,11 @@ def fmt_tall(verdi: float | int, desimaler: int = 2) -> str:
     return f"-{tekst}" if v < 0 else tekst
 
 
+def fmt_kwh(verdi: float | int) -> str:
+    """kWh med én desimal (halvt opp). Tilstrekkelig, og lett å kontrollere for hånd."""
+    return fmt_tall(verdi, 1)
+
+
 def fmt_dato(iso: str) -> str:
     """ISO-dato (YYYY-MM-DD) til dd.mm.åååå."""
     return date.fromisoformat(iso).strftime("%d.%m.%Y")
@@ -99,7 +104,7 @@ summary { cursor:pointer; font-weight:600; }
 def _hittil(ctx: dict[str, Any]) -> str:
     h = ctx.get("hittil")
     if h and h.get("kwh") is not None:
-        kwh = f"{fmt_tall(h['kwh'], 2)} kWh"
+        kwh = f"{fmt_kwh(h['kwh'])} kWh"
     else:
         kwh = "–"
     snitt = f"{fmt_tall(h['snitt'], 4)} kr/kWh" if h and h.get("snitt") is not None else "–"
@@ -137,7 +142,7 @@ def _historikk(synlige: list[dict[str, Any]], ubetalt_sum: float) -> str:
     rader = "\n".join(
         f"""      <tr>
         <td>{_e(periode_tekst(p))}</td>
-        <td>{fmt_tall(p["leilighet_kwh"], 1)}</td>
+        <td>{fmt_kwh(p["leilighet_kwh"])}</td>
         <td>{fmt_tall(p["snitt"], 4)}</td>
         <td>{fmt_tall(p["belop"], 2)}</td>
         <td>{fmt_dato(p["forfall"])}</td>

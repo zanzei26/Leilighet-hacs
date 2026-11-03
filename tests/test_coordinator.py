@@ -405,7 +405,7 @@ async def test_siden_skrives_hver_time_med_hittil_tall(hass, oppsett):
                 utility="30.25")  # fmt: skip
     await o.coordinator.async_refresh()
     html = _side(o)
-    assert "30,25 kWh" in html and "1,5000" in html and "40,00 kr" in html
+    assert "30,3 kWh" in html and "1,5000" in html and "40,00 kr" in html
     assert "20.11.2026 12:00" in html
     o.freezer.tick(timedelta(hours=1))
     await o.coordinator.async_refresh()

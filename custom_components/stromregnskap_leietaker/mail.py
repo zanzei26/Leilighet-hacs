@@ -13,7 +13,7 @@ from email.message import EmailMessage
 from html import escape
 from typing import Any
 
-from .page import fmt_dato, fmt_tall, maaned_tekst
+from .page import fmt_dato, fmt_kwh, fmt_tall, maaned_tekst
 
 SMTP_TIMEOUT = 30
 
@@ -51,7 +51,7 @@ def bygg_epost(
     """Bygger månedsoppgjøret som flerdelt e-post (ren tekst + HTML)."""
     maaned = maaned_tekst(periode["id"])
     fornavn = _fornavn(leietaker["navn"])
-    kwh = f"{fmt_tall(periode['leilighet_kwh'], 1)} kWh"
+    kwh = f"{fmt_kwh(periode['leilighet_kwh'])} kWh"
     snitt = f"{fmt_tall(periode['snitt'], 4)} kr/kWh"
     belop = f"{fmt_tall(periode['belop'], 2)} kr"
     forfall = fmt_dato(periode["forfall"])

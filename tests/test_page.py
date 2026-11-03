@@ -2,7 +2,12 @@
 
 from copy import deepcopy
 
-from custom_components.stromregnskap_leietaker.page import fmt_dato, fmt_tall, render_side
+from custom_components.stromregnskap_leietaker.page import (
+    fmt_dato,
+    fmt_kwh,
+    fmt_tall,
+    render_side,
+)
 
 from .data import LEIETAKER, OKT, perioder, side_ctx
 
@@ -138,3 +143,17 @@ def test_ikke_betalt_og_unntak_vises_begge_som_ikke_betalt():
     ps[0]["status"] = "unntak_ikke_betalt"
     html = render_side(side_ctx(perioder=ps))
     assert "607,04" in html  # 302,79 + 304,25 regnes begge som utestående
+
+
+def test_kwh_vises_med_en_desimal_og_avrundes_halvt_opp():
+    assert fmt_kwh(234.0) == "234,0"
+    assert fmt_kwh(250.4) == "250,4"
+    assert fmt_kwh(250.123) == "250,1"
+    assert fmt_kwh(250.15) == "250,2"
+    assert fmt_kwh(1000.5) == "1\u00a0000,5"
+    assert fmt_kwh(0) == "0,0"
+
+
+def test_hittil_forbruket_vises_med_en_desimal():
+    html = render_side(side_ctx())
+    assert "21,9 kWh" in html and "21,85" not in html

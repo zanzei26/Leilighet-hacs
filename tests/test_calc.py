@@ -270,7 +270,7 @@ def test_forrige_periode_hopper_over_de_som_venter_godkjenning():
 
 
 def test_maalerforbruk_er_differansen_mellom_to_avlesninger():
-    assert maaler_forbruk(0.0, 250.1234) == MaalerForbruk(250.123, None)
+    assert maaler_forbruk(0.0, 250.1234) == MaalerForbruk(250.1, None)
     assert maaler_forbruk(1000.5, 1234.5) == MaalerForbruk(234.0, None)
 
 
@@ -313,3 +313,21 @@ def test_avvik_mellom_maaler_og_sensor_lister_alle_tre_tall():
     for tall in ("253,0", "250,0", "250,2"):
         assert tall in valg.avvik
     assert "målerstander" in valg.avvik
+
+
+def test_maalerstandene_rundes_til_en_desimal_foer_differansen_slik_at_papiret_stemmer():
+    # 1000,55 → 1000,6 og 1234,52 → 1234,5: forbruket er differansen av det som står på papiret
+    assert maaler_forbruk(1000.55, 1234.52) == MaalerForbruk(233.9, None)
+
+
+def test_oppgjoeret_runder_kwh_til_en_desimal_og_regner_belopet_fra_den_avrundede_verdien():
+    p = beregn_oppgjor(
+        periode_id="2026-10",
+        maned=OKT,
+        leilighet_kwh=250.04,
+        forfallsdag=15,
+        naa=datetime(2026, 11, 3, 8, 11, tzinfo=OSLO),
+        kilde="test",
+    )
+    assert p["leilighet_kwh"] == 250.0
+    assert p["belop"] == 325.05  # 250,0 × 1,3002

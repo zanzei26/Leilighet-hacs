@@ -171,3 +171,8 @@ def test_lenkeposten_har_ingen_vedlegg_og_escaper_html():
     msg = _lenke(leietaker={**LEIETAKER, "navn": "<b>Eva</b>"})
     assert list(msg.iter_attachments()) == []
     assert "<b>Eva</b>" not in msg.get_body(("html",)).get_content()
+
+
+def test_epost_viser_kwh_med_en_desimal():
+    msg = _msg(periode={**OKT, "leilighet_kwh": 250.123})
+    assert "250,1 kWh" in msg.get_body(("plain",)).get_content()

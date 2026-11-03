@@ -11,6 +11,7 @@ from homeassistant.util import dt as dt_util
 
 from .calc import (
     STATUS_VENTER,
+    avrund,
     beregn_oppgjor,
     forrige_periode,
     forrige_periode_id,
@@ -20,7 +21,7 @@ from .calc import (
 )
 from .const import CONF_ENT_REGNSKAP, CONF_FORFALLSDAG
 from .kilder import fullstendig, til_float
-from .page import fmt_tall
+from .page import fmt_kwh, fmt_tall
 from .varsler import ISSUE_MANGLER, ISSUE_VENTER
 
 PERIODE_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
@@ -32,7 +33,7 @@ class ManglerData(ServiceValidationError):
 
 def sammendrag(p: dict[str, Any]) -> str:
     return (
-        f"{fmt_tall(p['leilighet_kwh'], 1)} kWh × {fmt_tall(p['snitt'], 4)} "
+        f"{fmt_kwh(p['leilighet_kwh'])} kWh × {fmt_tall(p['snitt'], 4)} "
         f"= {fmt_tall(p['belop'], 2)} kr"
     )
 
@@ -105,6 +106,10 @@ class GenereringMixin:
             naa=naa,
             kilde=valg.kilde + (" + snapshot" if fra_bilde else ""),
         )
+        if maaler.kwh is not None:
+            start, slutt = periode_start_slutt(periode_id)
+            p["maaler_start"] = avrund(self._lagret_stand(start), 1)
+            p["maaler_slutt"] = avrund(self._lagret_stand(slutt), 1)
         brudd: list[str] = []
         if not tving:
             if fra_bilde:

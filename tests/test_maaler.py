@@ -8,6 +8,8 @@ from homeassistant.util import dt as dt_util
 
 from custom_components.stromregnskap_leietaker.maaler import stand_fra_rader
 
+from .data import NOV_HUS, OKT_HUS, SEP_HUS, sett_kilder
+
 IMPORT = "sensor.minusmaler_leilighet_import"
 
 
@@ -208,3 +210,14 @@ async def test_manuell_malerstand_lagres_og_kan_gis_som_aar_maaned(hass, oppsett
 async def test_ugyldig_manuell_malerstand_avvises(hass, oppsett, dato, stand):
     with pytest.raises(ServiceValidationError):
         await oppsett.coordinator.async_sett_malerstand(dato, stand)
+
+
+async def test_oppgjoeret_lagrer_avrundede_malerstander_slik_at_regnestykket_stemmer(hass, oppsett):
+    o = oppsett
+    o.lager.data["maalerstander"]["2026-11-01"]["stand"] = 1000.55
+    o.lager.data["maalerstander"]["2026-12-01"]["stand"] = 1250.52
+    sett_kilder(hass, maneder=[SEP_HUS, OKT_HUS, {**NOV_HUS, "leilighet_kwh": 250.0}])
+    p = await o.coordinator.async_generer_oppgjor("2026-11", tving=True, send_epost=False)
+    assert p["maaler_start"] == 1000.6 and p["maaler_slutt"] == 1250.5
+    assert p["leilighet_kwh"] == 249.9  # 1250,5 - 1000,6
+    assert p["belop"] == 309.88  # 249,9 × 1,24 = 309,876
