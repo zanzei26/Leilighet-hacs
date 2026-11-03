@@ -91,3 +91,35 @@ async def test_fiks_etter_at_perioden_er_slettet_avbrytes(hass, integrasjon):
     await _kall(hass, "slett_periode", {"periode": "2026-11", "bekreft": True})
     ferdig = await _bekreft(manager, steg["flow_id"])
     assert ferdig["type"] is FlowResultType.ABORT and ferdig["reason"] == "handling_feilet"
+
+
+async def test_etterslep_repareres_med_en_fiksflyt_som_lager_oppgjoeret(hass, integrasjon):
+    from datetime import timedelta  # noqa: F401
+
+    coordinator = integrasjon.entry.runtime_data.coordinator
+    integrasjon.entry.runtime_data.lager.tilstand["opprettet"] = "2026-10-01T10:00:00+01:00"
+    integrasjon.freezer.move_to("2026-12-07 08:30:00+01:00")  # vinduet 3.–6. er over
+    await coordinator.async_refresh()
+    issue = _issue(hass, "etterslep_2026-11")
+    assert issue is not None and issue.is_fixable is True
+    assert integrasjon.entry.runtime_data.lager.finn("2026-11") is None
+
+    manager, steg = await _start_fiks(hass, "etterslep_2026-11")
+    assert steg["type"] is FlowResultType.FORM
+    ferdig = await _bekreft(manager, steg["flow_id"])
+    assert ferdig["type"] is FlowResultType.CREATE_ENTRY
+    p = integrasjon.entry.runtime_data.lager.finn("2026-11")
+    assert p is not None and p["status"] == "ikke_betalt"
+    assert _issue(hass, "etterslep_2026-11") is None
+
+
+async def test_etterslep_fiksflyt_uten_data_avbrytes_med_forklaring(hass, integrasjon):
+    coordinator = integrasjon.entry.runtime_data.coordinator
+    integrasjon.entry.runtime_data.lager.tilstand["opprettet"] = "2026-10-01T10:00:00+01:00"
+    integrasjon.freezer.move_to("2026-12-07 08:30:00+01:00")
+    sett_kilder(hass, maneder=[])
+    await coordinator.async_refresh()
+    manager, steg = await _start_fiks(hass, "etterslep_2026-11")
+    ferdig = await _bekreft(manager, steg["flow_id"])
+    assert ferdig["type"] is FlowResultType.ABORT and ferdig["reason"] == "handling_feilet"
+    assert _issue(hass, "etterslep_2026-11") is not None

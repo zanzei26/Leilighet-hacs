@@ -16,7 +16,7 @@ Custom integration for Home Assistant som regner ut leietakers månedlige strøm
 |---|---|
 | `sensor.jarvis_stromregnskap` | Husets månedstall. Attributtene `maneder` og `denne_maneden`. Eneste kilde til husets snittpris. |
 | `sensor.leilighet_strom_denne_maneden` | Leilighetens forbruk i løpende måned (utility_meter). `last_period` er forrige måneds sluttverdi. |
-| `sensor.minusmaler_leilighet_import` | Rå akkumulert kWh. Eksponeres som attributt, brukes ikke i beregningen. |
+| `sensor.minusmaler_leilighet_import` | Leilighetens målerstand i kWh (teller opp, nullstilles aldri). **Hovedkilden til forbruket.** |
 | `sensor.minusmaler_leilighet_effekt` | Øyeblikkseffekt (W), kun til visning. |
 | `sensor.mal_forbruk_prognose` | Attributtet `endring_prosent` brukes til månedsestimatet. |
 | `notify.varsle_magnar` | Varslingstjeneste til utleier (en tjeneste, ikke en entitet). |
@@ -43,13 +43,26 @@ Alt kan endres senere under **Konfigurer** (menyvalg per tema). Passordfeltet ka
 Koordinatoren kjører hver time. Fra kjøredagen kl. 08:00 til og med siste sjekkdag prøver den å lage oppgjør for forrige kalendermåned, hvis det ikke finnes fra før:
 
 1. `sensor.jarvis_stromregnskap` må ha et element i `maneder` med riktig `mnd` og komplette tall for huset. Ellers prøves det igjen hver time. På siste sjekkdag kl. 08:00 får utleier ett varsel og en Repairs-melding.
-2. Leilighetens kWh er primært `leilighet_kwh` fra `maneder`, ellers `last_period` fra utility_meter. Er begge til stede og avviker de mer enn 0,5 kWh, sendes ikke oppgjøret. Utleier får begge tallene.
+2. **Leilighetens kWh er målerstanden ved månedsskiftet minus målerstanden ved forrige månedsskifte**, slik man regnet før. Regnskapssensorens `leilighet_kwh` og utility_meterens `last_period` brukes som kontroll. Avviker noen av dem mer enn 0,5 kWh, eller mangler en av målerstandene, sendes ikke oppgjøret. Utleier får alle tallene og må godkjenne.
 3. Beløp = kWh × snittpris, avrundet til hele øre (halvt øre rundes opp).
 4. **Rimelighetskontroll** (snittpris innenfor grensene, 0 < leilighet ≤ hus, endring mot forrige periode innenfor grensen). Ved brudd får perioden status `venter_godkjenning`, utleier får varsel med tallene og hvilken regel som slo ut, og en Repairs-melding med «Godkjenn». Ingenting sendes, og perioden vises ikke på siden.
 5. Ellers lagres perioden, siden oppdateres, og e-post sendes (kopi til utleier). Utleier får et kort push-varsel.
 6. Feiler e-posten, beholdes perioden og det prøves igjen hver time i 48 timer. Utleier varsles én gang, og deretter kommer en Repairs-melding med «Send på nytt».
 
 `ikke_betalt` blir automatisk `betalt` fra og med forfallsdagen. `unntak_ikke_betalt` forblir ubetalt til noen setter `betalt` (tillitsbasert, utleier sjekker nettbanken selv).
+
+## Datasikkerhet
+
+Målet er at et hull i én kilde aldri gjør at du står uten grunnlag ved månedsskiftet.
+
+- **Målerstander.** Integrasjonen lagrer målerstanden rett etter midnatt ved hvert månedsskifte. Mangler en avlesning (for eksempel fordi Home Assistant var nede), hentes den fra Home Assistants timesstatistikk, eller du legger den inn med handlingen `sett_malerstand`. En lagret avlesning overskrives aldri automatisk. Ved første oppsett lagres startstanden du oppgir, eller statistikken hvis den finnes.
+- **Fast lagring som overlever.** Historikken ligger under en fast nøkkel i `.storage`, uavhengig av config entry. Fjerner du integrasjonen og legger den til igjen, er historikken der fortsatt. Data fra 0.1.x flyttes automatisk.
+- **Rullerende sikkerhetskopier.** Hver endring gir en JSON-kopi i `/config/stromregnskap_leietaker/sikkerhetskopi/` (de 30 nyeste, pluss den nyeste fra hver eldre måned). Kopiene dekkes av vanlige Home Assistant-sikkerhetskopier. Er lagringsfilen borte eller ødelagt, gjenopprettes siste gyldige kopi automatisk i stedet for at integrasjonen starter tom. Feil ved sikkerhetskopiering stopper aldri selve lagringen, men vises i `binary_sensor.leietaker_datagrunnlag`.
+- **Øyeblikksbilde av kildetallene.** Hver sjette time lagres husets tall for måneden som pågår. Mister regnskapssensoren en måned før oppgjøret lages, brukes siste bilde som reserve. **Et oppgjør bygd på et øyeblikksbilde sendes aldri automatisk**, det venter alltid på din godkjenning.
+- **Tidlig varsel.** `binary_sensor.leietaker_datagrunnlag` er `on` hvis noe hindrer at neste oppgjør kan lages trygt (utilgjengelig regnskapssensor eller måler, manglende målerstand, gammelt øyeblikksbilde, feilende sikkerhetskopi). Fra den 25. får du dessuten ett varsel per dag og en melding under Reparasjoner, slik at du vet det dager før månedsskiftet.
+- **Etterslep.** Er oppgjøret for forrige måned ikke laget når den automatiske kjøringen er over (for eksempel fordi Home Assistant var nede 3.–6.), får du daglig varsel og en reparasjon som lager det.
+
+Gjenoppretting skjer automatisk bare når lagringen mangler eller er ødelagt. Det finnes ingen handling for å gå tilbake til en bestemt kopi. Vil du det, kan du stoppe Home Assistant, erstatte feltet `data` i `.storage/stromregnskap_leietaker` med feltet `data` fra den kopien du vil tilbake til, og starte igjen. Filene har samme form, og du bør ta en ekstra kopi av begge først.
 
 ## Leietakersiden
 
@@ -71,6 +84,7 @@ Alle entitetene ligger på én enhet, «Leietaker».
 | `sensor.leietaker_side_sist_publisert` | Tidsstempel. Attributt: lenke. |
 | `sensor.leietaker_lenke` | Leietakerlenken, slik at du kan se og kopiere den. Ukjent hvis siden ikke publiseres. |
 | `binary_sensor.leietaker_oppgjor_venter_godkjenning` | `on` når en periode venter på godkjenning. |
+| `binary_sensor.leietaker_datagrunnlag` | `on` (problem) hvis noe hindrer at neste oppgjør kan lages trygt. Attributter: problemene, siste målerstander, siste øyeblikksbilde og sikkerhetskopi. |
 | `button.leietaker_send_lenke` | Sender en kort e-post til leietaker med bare lenken. |
 | `button.leietaker_merk_som_betalt` | Merker alle utestående oppgjør som betalt. |
 
@@ -87,6 +101,7 @@ Estimatet er forrige periodes leilighets-kWh × (1 + `endring_prosent`/100), pri
 | `stromregnskap_leietaker.send_epost_pa_nytt` | `periode` | Sender oppgjøret på e-post på nytt. |
 | `stromregnskap_leietaker.send_lenke` | | Sender en kort e-post til leietaker med lenken til siden. |
 | `stromregnskap_leietaker.merk_betalt` | `periode` (valgfri) | Merker utestående oppgjør som betalt. Uten periode: alle utestående. |
+| `stromregnskap_leietaker.sett_malerstand` | `dato` (første dag i måneden), `stand` (kWh) | Legger inn eller retter målerstanden ved et månedsskifte. |
 | `stromregnskap_leietaker.sett_status` | `periode`, `status` | `betalt`, `ikke_betalt` eller `unntak_ikke_betalt`. |
 | `stromregnskap_leietaker.publiser_side` | | Lager siden på nytt nå. |
 | `stromregnskap_leietaker.slett_periode` | `periode`, `bekreft: true` | Sletter en periode. Et sendt oppgjør er låst og kan bare fjernes slik. |
@@ -111,12 +126,14 @@ Tillegg utover den opprinnelige skissen:
 Dette er avvik og ting som ikke er gjort. Det er viktig å se på dem før integrasjonen tas i bruk.
 
 1. **September: 302,79 kr (avklart).** 228,0 × 1,3280 = 302,784, så det oppgitte beløpet stemmer ikke helt med regnestykket. Vanlig avrunding gjelder (halvt øre opp). Perioden importeres med det faktisk fakturerte beløpet, 302,79 kr, og regnes ikke om.
-2. **Kryssjekken mot `sensor.minusmaler_leilighet_import` er ikke bygget.** Den rå måleren er akkumulert fra 01.11.2026 og er bare lik utility_meter i første måned, så en enkel sammenligning ville gitt falske alarmer fra desember. Verdien eksponeres som attributt (`maaler_total_kwh`). Hva slags sjekk som ønskes, bør avklares.
+2. **Kryssjekken er nå bygget** (se «Datasikkerhet»): målerstandene regnes mot regnskapssensoren og utility_meter, og avvik over 0,5 kWh krever godkjenning.
 3. **Ikke testet mot ekte Home Assistant eller ekte Gmail.** Sensorformene er lest fra den levende instansen, og alt annet er testet med mocket SMTP. Kjør `send_epost_pa_nytt` og test-e-posten i oppsettet, og åpne lenken fra mobil utenfor hjemmenettet (se «Overgang» under).
 4. **Hvis du hopper over historikkimporten**, vil første kjøring prøve å lage oppgjør for forrige måned og sende det til leietaker.
 5. **Ruter kan ikke fjernes i Home Assistant.** Etter `ny_leietaker` svarer den gamle lenken 404 umiddelbart, men ruten ligger registrert til neste omstart.
 6. **App-passordet ligger i klartekst i config entry.**
-7. **Datasikkerhet er ikke god nok ennå (planlagt i 0.2.0).** Historikken ligger bare i Home Assistants `.storage` (dekkes av vanlige Home Assistant-sikkerhetskopier) og følger config entry'en. Det finnes ingen egen sikkerhetskopi, og integrasjonen lagrer ikke selv et øyeblikksbilde av kildetallene gjennom måneden. Mister `sensor.jarvis_stromregnskap` tallene for en måned før den 3., kan oppgjøret ikke lages automatisk.
+7. **Uthenting av målerstand fra statistikken er best effort og ikke verifisert mot en ekte Home Assistant.** Den brukes bare som reserve hvis integrasjonen ikke var oppe ved midnatt. Virker den ikke, får du «målerstand mangler» i `binary_sensor.leietaker_datagrunnlag`, og du legger inn tallet med `sett_malerstand`.
+8. **Etter oppdatering til 0.2.0:** sjekk under Konfigurer → Datakilder at «Målerstand ved start av denne måneden» er riktig (0 hvis måleren startet på 0), og at `binary_sensor.leietaker_datagrunnlag` er `off`.
+9. **Ingen kopi utenfor Home Assistant ennå.** Sikkerhetskopiene ligger på samme maskin. En månedlig e-post med hele regnskapet kommer i 0.3.0.
 
 ## Overgang fra Claude-oppgavene
 

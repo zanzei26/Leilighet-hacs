@@ -52,6 +52,7 @@ TJENESTER = {
     "ny_leietaker": set(),
     "send_lenke": set(),
     "merk_betalt": {"periode"},
+    "sett_malerstand": {"dato", "stand"},
 }
 
 
@@ -220,3 +221,13 @@ def test_grensene_forklarer_hva_som_skjer_ved_brudd():
     assert "godkjenn" in t["description"].lower()
     assert "±" in t["data_description"]["endring_maks_prosent"]
     assert "generer" in t["data_description"]["siste_sjekkdag"].lower()
+
+
+@pytest.mark.parametrize("spraak", SPRAAK)
+def test_nye_issues_har_tekst_og_riktige_plassholdere(spraak):
+    i = _les(spraak)["issues"]
+    assert i["datagrunnlag"]["title"] and "{problemer}" in i["datagrunnlag"]["description"]
+    assert "{maned}" in i["datagrunnlag"]["title"]
+    assert i["etterslep"]["title"] and "{maned}" in i["etterslep"]["title"]
+    assert "{periode}" in i["etterslep"]["fix_flow"]["step"]["confirm"]["description"]
+    assert "{feil}" in i["etterslep"]["fix_flow"]["abort"]["handling_feilet"]

@@ -180,6 +180,7 @@ async def test_entitetene_samles_paa_en_enhet_og_navnene_dobles_ikke(
         "sensor.leietaker_side_sist_publisert",
         "sensor.leietaker_lenke",
         "binary_sensor.leietaker_oppgjor_venter_godkjenning",
+        "binary_sensor.leietaker_datagrunnlag",
         "button.leietaker_send_lenke",
         "button.leietaker_merk_som_betalt",
     }

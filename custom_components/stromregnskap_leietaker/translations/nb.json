@@ -293,6 +293,25 @@
           "handling_feilet": "Kunne ikke fullføre: {feil}"
         }
       }
+    },
+    "datagrunnlag": {
+      "title": "Datagrunnlaget for oppgjøret for {maned} har problemer",
+      "description": "Månedsskiftet nærmer seg, og dette må ordnes før oppgjøret kan lages trygt: {problemer}"
+    },
+    "etterslep": {
+      "title": "Oppgjøret for {maned} er ikke laget",
+      "description": "Den automatiske kjøringen er over uten at oppgjøret for {periode} ble laget. Bruk reparasjonen for å lage det nå, eller kjør handlingen «Generer oppgjør».",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Lag oppgjøret nå",
+            "description": "Lage og sende oppgjøret for {periode} nå?"
+          }
+        },
+        "abort": {
+          "handling_feilet": "Kunne ikke fullføre: {feil}"
+        }
+      }
     }
   },
   "services": {
@@ -381,6 +400,20 @@
         "periode": {
           "name": "Periode",
           "description": "Måneden som ÅÅÅÅ-MM. La stå tomt for å merke alt utestående som betalt."
+        }
+      }
+    },
+    "sett_malerstand": {
+      "name": "Sett målerstand",
+      "description": "Legger inn eller retter målerstanden ved et månedsskifte. Brukes hvis en avlesning mangler, for eksempel fordi Home Assistant var nede ved midnatt.",
+      "fields": {
+        "dato": {
+          "name": "Dato",
+          "description": "Første dag i måneden, for eksempel 2026-12-01 eller 2026-12. Målerstanden gjelder ved midnatt inn i den måneden."
+        },
+        "stand": {
+          "name": "Målerstand (kWh)",
+          "description": "Det måleren viste ved månedsskiftet."
         }
       }
     }

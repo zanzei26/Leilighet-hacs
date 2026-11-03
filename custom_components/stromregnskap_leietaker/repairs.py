@@ -11,7 +11,7 @@ from homeassistant.data_entry_flow import FlowResult
 from homeassistant.exceptions import HomeAssistantError
 
 from .coordinator import StromregnskapCoordinator
-from .varsler import ISSUE_EPOST, ISSUE_VENTER
+from .varsler import ISSUE_EPOST, ISSUE_ETTERSLEP, ISSUE_VENTER
 
 
 class _BekreftFlow(RepairsFlow):
@@ -65,6 +65,11 @@ class EpostFlow(_BekreftFlow):
         await koordinator.async_send_epost_pa_nytt(self._periode)
 
 
+class EtterslepFlow(_BekreftFlow):
+    async def _utfor(self, koordinator: StromregnskapCoordinator) -> None:
+        await koordinator.async_generer_oppgjor(self._periode)
+
+
 async def async_create_fix_flow(
     hass: HomeAssistant,
     issue_id: str,
@@ -76,4 +81,6 @@ async def async_create_fix_flow(
         return GodkjennFlow(data)
     if issue_id.startswith(f"{ISSUE_EPOST}_"):
         return EpostFlow(data)
+    if issue_id.startswith(f"{ISSUE_ETTERSLEP}_"):
+        return EtterslepFlow(data)
     raise ValueError(f"Ukjent issue: {issue_id}")

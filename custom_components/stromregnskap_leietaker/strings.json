@@ -293,6 +293,25 @@
           "handling_feilet": "Could not complete: {feil}"
         }
       }
+    },
+    "datagrunnlag": {
+      "title": "The data basis for the {maned} settlement has problems",
+      "description": "The month change is approaching, and this must be fixed before the settlement can be created safely: {problemer}"
+    },
+    "etterslep": {
+      "title": "The settlement for {maned} has not been created",
+      "description": "The automatic run is over without the settlement for {periode} being created. Use the repair to create it now, or run the “Generate settlement” action.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Create the settlement now",
+            "description": "Create and send the settlement for {periode} now?"
+          }
+        },
+        "abort": {
+          "handling_feilet": "Could not complete: {feil}"
+        }
+      }
     }
   },
   "services": {
@@ -381,6 +400,20 @@
         "periode": {
           "name": "Period",
           "description": "The month as YYYY-MM. Leave empty to mark everything outstanding as paid."
+        }
+      }
+    },
+    "sett_malerstand": {
+      "name": "Set meter reading",
+      "description": "Enters or corrects the meter reading at a month change. Use it if a reading is missing, for example because Home Assistant was down at midnight.",
+      "fields": {
+        "dato": {
+          "name": "Date",
+          "description": "The first day of the month, for example 2026-12-01 or 2026-12. The reading applies at midnight into that month."
+        },
+        "stand": {
+          "name": "Meter reading (kWh)",
+          "description": "What the meter showed at the month change."
         }
       }
     }
