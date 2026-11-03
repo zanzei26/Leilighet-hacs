@@ -15,6 +15,7 @@ from homeassistant.util import dt as dt_util
 
 from .const import CONF_IMPORTER_HISTORIKK, CONF_PUBLISER_SIDE, CONF_SLUG, DOMAIN, HISTORIKK
 from .coordinator import StromregnskapCoordinator
+from .pdf_view import LeietakerPdfView
 from .services import async_registrer_tjenester
 from .storage import Lager
 from .view import LeietakerSideView
@@ -36,7 +37,11 @@ type StromregnskapConfigEntry = ConfigEntry[StromregnskapData]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    hass.data.setdefault(DOMAIN, {"aktive_slugs": {}, "registrerte_slugs": set()})
+    hass.data.setdefault(
+        DOMAIN, {"aktive_slugs": {}, "registrerte_slugs": set(), "koordinatorer": {}}
+    )
+    if hass.http is not None:  # én dynamisk rute for alle PDF-er, registrert før serveren starter
+        hass.http.register_view(LeietakerPdfView(hass))
     async_registrer_tjenester(hass)
     return True
 
@@ -71,6 +76,7 @@ def _registrer_side(
     reg = hass.data[DOMAIN]
     slug = coordinator.cfg[CONF_SLUG]
     reg["aktive_slugs"][slug] = coordinator.side_sti
+    reg["koordinatorer"][slug] = coordinator
     if slug not in reg["registrerte_slugs"]:  # ruter kan ikke fjernes, bare registreres én gang
         hass.http.register_view(LeietakerSideView(hass, slug))
         reg["registrerte_slugs"].add(slug)
@@ -78,6 +84,7 @@ def _registrer_side(
     @callback
     def _skjul_side() -> None:
         reg["aktive_slugs"].pop(slug, None)
+        reg["koordinatorer"].pop(slug, None)
 
     entry.async_on_unload(_skjul_side)
 

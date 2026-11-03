@@ -16,7 +16,7 @@ def cloud_url(hass: HomeAssistant) -> str | None:
         return None
 
 
-def bygg_side_url(hass: HomeAssistant, slug: str) -> str | None:
+def _basis(hass: HomeAssistant) -> str | None:
     """Nabu Casa først, ellers ekstern/intern URL. None hvis HA ikke kjenner noen adresse."""
     base = cloud_url(hass)
     if not base:
@@ -24,4 +24,16 @@ def bygg_side_url(hass: HomeAssistant, slug: str) -> str | None:
             base = get_url(hass, allow_cloud=False, prefer_external=True)
         except NoURLAvailableError:
             return None
-    return f"{base.rstrip('/')}/local/{slug}/index.html"
+    return base.rstrip("/")
+
+
+def bygg_side_url(hass: HomeAssistant, slug: str) -> str | None:
+    """Full lenke til leietakersiden, eller None hvis HA ikke har noen kjent adresse."""
+    base = _basis(hass)
+    return None if base is None else f"{base}/local/{slug}/index.html"
+
+
+def bygg_pdf_url(hass: HomeAssistant, slug: str, fil: str) -> str | None:
+    """Full lenke til en PDF (regnskap eller fakturagrunnlag) bak den hemmelige lenken."""
+    base = _basis(hass)
+    return None if base is None else f"{base}/stromregnskap/{slug}/{fil}"

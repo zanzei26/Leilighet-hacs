@@ -39,6 +39,7 @@ from .const import (
     OPPDATERINGSINTERVALL_TIMER,
 )
 from .datagrunnlag import DatagrunnlagMixin
+from .eksport import EksportMixin
 from .epost import EpostMixin
 from .filer import skriv_atomisk
 from .generering import GenereringMixin, ManglerData
@@ -57,6 +58,7 @@ _LOGGER = logging.getLogger(__name__)
 class StromregnskapCoordinator(
     GenereringMixin,
     EpostMixin,
+    EksportMixin,
     HandlingerMixin,
     MaalerMixin,
     SnapshotMixin,

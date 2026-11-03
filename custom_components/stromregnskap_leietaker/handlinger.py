@@ -117,6 +117,7 @@ class HandlingerMixin:
 
         # den gamle lenken skal dø med en gang, også før integrasjonen er lastet på nytt
         self.hass.data[DOMAIN]["aktive_slugs"].pop(gammel_slug, None)
+        self.hass.data[DOMAIN]["koordinatorer"].pop(gammel_slug, None)
         await self.hass.async_add_executor_job(
             fjern_mappe, self.hass.config.path("www", gammel_slug)
         )
