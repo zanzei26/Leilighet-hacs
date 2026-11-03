@@ -35,6 +35,7 @@ def standard_data() -> dict[str, Any]:
         "utleier": {},
         "perioder": [],
         "maalerstander": {},
+        "laderstander": {},
         "snapshots": {},
         "tilstand": {"historikk_importert": False, "varslet": [], "opprettet": None},
     }
@@ -151,6 +152,6 @@ class Lager:
         return len(self.perioder) != antall
 
     def tom_historikk(self) -> None:
-        """Tømmer perioder og varslingshistorikk. Målerstander og importflagget beholdes."""
+        """Tømmer perioder og varslingshistorikk. Alle målerstander og importflagget beholdes."""
         self.data["perioder"] = []
         self.tilstand["varslet"] = []

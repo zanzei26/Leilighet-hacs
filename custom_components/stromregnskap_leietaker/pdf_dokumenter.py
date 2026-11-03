@@ -10,7 +10,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from .calc import STATUS_BETALT, STATUS_VENTER, avrund, utestaaende
+from .calc import STATUS_BETALT, STATUS_VENTER, avrund, leilighet_belop, utestaaende
 from .filnavn import REGNSKAPSNAVN, fakturanavn  # noqa: F401 - gjeneksporteres
 from .page import fmt_dato, fmt_kwh, fmt_tall, maaned_tekst, periode_tekst
 from .pdf import (
@@ -104,6 +104,7 @@ def bygg_fakturagrunnlag(
     y += 18
     y = _parter(s, y, leietaker, utleier)
 
+    lader = periode.get("lader_kwh") is not None  # laderen var med i denne perioden
     y = _seksjon(s, y, "1. Ditt forbruk")
     if periode.get("maaler_start") is not None and periode.get("maaler_slutt") is not None:
         y = _verdirad(
@@ -113,8 +114,29 @@ def bygg_fakturagrunnlag(
             s, y, f"Målerstand {slutt:%d.%m.%Y}", f"{fmt_tall(periode['maaler_slutt'], 1)} kWh"
         )
     y = _verdirad(
-        s, y, "Ditt forbruk i perioden", f"{fmt_kwh(periode['leilighet_kwh'])} kWh", fet=True
+        s,
+        y,
+        "Ditt forbruk i leiligheten" if lader else "Ditt forbruk i perioden",
+        f"{fmt_kwh(periode['leilighet_kwh'])} kWh",
+        fet=True,
     )
+    if lader:
+        if periode.get("lader_start") is not None and periode.get("lader_slutt") is not None:
+            y = _verdirad(
+                s,
+                y,
+                f"Elbil-laderens teller {start:%d.%m.%Y}",
+                f"{fmt_tall(periode['lader_start'], 1)} kWh",
+            )
+            y = _verdirad(
+                s,
+                y,
+                f"Elbil-laderens teller {slutt:%d.%m.%Y}",
+                f"{fmt_tall(periode['lader_slutt'], 1)} kWh",
+            )
+        y = _verdirad(
+            s, y, "Forbruk elbil-lader i perioden", f"{fmt_kwh(periode['lader_kwh'])} kWh", fet=True
+        )
     y += 8
 
     y = _seksjon(s, y, "2. Husets strømkostnad i samme periode")
@@ -139,10 +161,24 @@ def bygg_fakturagrunnlag(
     y = _seksjon(s, y, "3. Utregning")
     utregning = (
         f"{fmt_kwh(periode['leilighet_kwh'])} kWh × {fmt_tall(periode['snitt'], 4)} kr/kWh"
-        f" = {fmt_tall(periode['belop'], 2)} kr"
+        f" = {fmt_tall(leilighet_belop(periode), 2)} kr"
     )
+    if lader:
+        s.tekst(M + 6, y, "Leilighet:", storrelse=9, farge=GRAA)
+        y += RAD - 2
     s.tekst(M + 6, y, utregning, storrelse=11)
-    y += RAD + 6
+    y += RAD + (0 if lader else 6)
+    if lader:
+        s.tekst(M + 6, y, "Elbil-lader (samme snittpris):", storrelse=9, farge=GRAA)
+        y += RAD - 2
+        s.tekst(
+            M + 6,
+            y,
+            f"{fmt_kwh(periode['lader_kwh'])} kWh × {fmt_tall(periode['snitt'], 4)} kr/kWh"
+            f" = {fmt_tall(periode['lader_belop'], 2)} kr",
+            storrelse=11,
+        )
+        y += RAD + 6
     s.linje(M, y - 8, H, y - 8)
     y = _verdirad(
         s, y + 6, "Beløp å betale", f"{fmt_tall(periode['belop'], 2)} kr", fet=True, storrelse=14
@@ -248,6 +284,7 @@ def bygg_regnskap(
         ),
         2,
     )
+    med_lader = any(p.get("lader_kwh") is not None for p in synlige)
     papir.y = _seksjon(s, papir.y, "Sammendrag")
     papir.y = _verdirad(s, papir.y, "Totalt fakturert", f"{fmt_tall(fakturert, 2)} kr")
     papir.y = _verdirad(s, papir.y, "Herav betalt", f"{fmt_tall(betalt, 2)} kr")
@@ -260,29 +297,41 @@ def bygg_regnskap(
         s.tekst(M, papir.y, "Ingen oppgjør ennå.", storrelse=11)
         papir.y += 24
     else:
-        _tabell(
-            papir,
-            "Leietakers oppgjør (snittpris i kr/kWh)",
-            [
+        if med_lader:
+            kolonner: list[Kolonne] = [
+                ("Periode", M, "v"),
+                ("Leilighet kWh", 240.0, "h"),
+                ("Lader kWh", 298.0, "h"),
+                ("Snittpris", 360.0, "h"),
+                ("Beløp (kr)", 420.0, "h"),
+                ("Forfall", 435.0, "v"),
+                ("Status", H, "h"),
+            ]
+            tittel = "Leietakers oppgjør (beløp = leilighet + elbil-lader, snittpris i kr/kWh)"
+        else:
+            kolonner = [
                 ("Periode", M, "v"),
                 ("Forbruk (kWh)", 290.0, "h"),
                 ("Snittpris", 350.0, "h"),
                 ("Beløp (kr)", 415.0, "h"),
                 ("Forfall", 430.0, "v"),
                 ("Status", H, "h"),
-            ],
-            [
-                [
-                    periode_tekst(p),
-                    fmt_kwh(p["leilighet_kwh"]),
-                    fmt_tall(p["snitt"], 4),
-                    fmt_tall(p["belop"], 2),
-                    fmt_dato(p["forfall"]),
-                    _status(p),
-                ]
-                for p in synlige
-            ],
-        )
+            ]
+            tittel = "Leietakers oppgjør (snittpris i kr/kWh)"
+        rader: list[list[str]] = []
+        for p in synlige:
+            rad = [periode_tekst(p), fmt_kwh(p["leilighet_kwh"])]
+            if med_lader:
+                lader = p.get("lader_kwh")
+                rad.append("–" if lader is None else fmt_kwh(lader))
+            rad += [
+                fmt_tall(p["snitt"], 4),
+                fmt_tall(p["belop"], 2),
+                fmt_dato(p["forfall"]),
+                _status(p),
+            ]
+            rader.append(rad)
+        _tabell(papir, tittel, kolonner, rader)
         _tabell(
             papir,
             "Husets strømkostnader per måned (kr)",
@@ -318,7 +367,8 @@ def bygg_regnskap(
         papir.side,
         papir.y,
         "Beløp per måned er leietakers målte forbruk multiplisert med husets faktiske snittpris "
-        "for samme kalendermåned (kraft pluss nettleie minus Norgespris, delt på husets forbruk).",
+        "for samme kalendermåned (kraft pluss nettleie minus Norgespris, delt på husets forbruk)."
+        + (" Elbil-laderen har egen teller og regnes med samme snittpris." if med_lader else ""),
         H - M,
     )
     return dok.til_bytes(naa)

@@ -92,6 +92,14 @@ sett_malerstand:
           step: 0.001
           mode: box
           unit_of_measurement: kWh
+    maaler:
+      required: false
+      default: leilighet
+      selector:
+        select:
+          options:
+            - leilighet
+            - lader
 
 send_regnskap:
   fields:

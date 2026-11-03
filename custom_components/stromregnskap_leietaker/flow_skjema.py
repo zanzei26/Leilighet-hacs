@@ -27,6 +27,7 @@ from .const import (
     CONF_ENDRING_MAKS,
     CONF_ENT_EFFEKT,
     CONF_ENT_IMPORT,
+    CONF_ENT_LADER,
     CONF_ENT_PROGNOSE,
     CONF_ENT_REGNSKAP,
     CONF_ENT_UTILITY,
@@ -36,6 +37,7 @@ from .const import (
     CONF_KJORETID,
     CONF_KONTONUMMER,
     CONF_KOPI_TIL_UTLEIER,
+    CONF_LADER_AKTIV,
     CONF_LEIETAKER_EPOST,
     CONF_LEIETAKER_NAVN,
     CONF_MAALER_START_STAND,
@@ -112,6 +114,11 @@ def schema_leietaker(d: dict[str, Any], *, bare_leietaker: bool = False) -> vol.
 
 
 def schema_kilder(d: dict[str, Any]) -> vol.Schema:
+    lader_nokkel = (
+        vol.Optional(CONF_ENT_LADER, description={"suggested_value": d[CONF_ENT_LADER]})
+        if d.get(CONF_ENT_LADER)
+        else vol.Optional(CONF_ENT_LADER)
+    )
     return vol.Schema(
         {
             vol.Required(
@@ -136,6 +143,10 @@ def schema_kilder(d: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 CONF_VARSEL_TJENESTE, default=d.get(CONF_VARSEL_TJENESTE, DEFAULT_VARSEL_TJENESTE)
             ): _tekst(),
+            vol.Required(
+                CONF_LADER_AKTIV, default=d.get(CONF_LADER_AKTIV, False)
+            ): BooleanSelector(),
+            lader_nokkel: _sensor(),
         }
     )
 
@@ -220,6 +231,8 @@ def valider_kilder(hass: HomeAssistant, inn: dict[str, Any]) -> dict[str, str]:
     domene, _, tjeneste = inn[CONF_VARSEL_TJENESTE].partition(".")
     if not tjeneste or not hass.services.has_service(domene, tjeneste):
         return {CONF_VARSEL_TJENESTE: "tjeneste_finnes_ikke"}
+    if inn.get(CONF_LADER_AKTIV) and not inn.get(CONF_ENT_LADER):
+        return {CONF_ENT_LADER: "lader_mangler"}
     return {}
 
 

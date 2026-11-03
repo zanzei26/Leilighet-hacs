@@ -95,11 +95,18 @@ class MaalerForbruk:
     feil: str | None = None
 
 
-def maaler_forbruk(stand_start: float | None, stand_slutt: float | None) -> MaalerForbruk:
+def maaler_forbruk(
+    stand_start: float | None,
+    stand_slutt: float | None,
+    *,
+    stand: str = "Målerstanden",
+    enhet: str = "Måleren",
+) -> MaalerForbruk:
     """Forbruk = målerstand ved slutten minus målerstand ved starten av perioden.
 
     Målerstandene rundes til én desimal (halvt opp) før differansen, slik at forbruket er
-    nøyaktig differansen av tallene som står på fakturagrunnlaget.
+    nøyaktig differansen av tallene som står på fakturagrunnlaget. ``stand`` og ``enhet``
+    brukes bare i feilmeldingen (laderen har sin egen teller).
     """
     if stand_start is None or stand_slutt is None:
         return MaalerForbruk(None, None)
@@ -107,8 +114,8 @@ def maaler_forbruk(stand_start: float | None, stand_slutt: float | None) -> Maal
     if stand_slutt < stand_start:
         return MaalerForbruk(
             None,
-            f"Målerstanden gikk bakover ({_norsk(stand_start)} → {_norsk(stand_slutt)} kWh). "
-            "Måleren kan være byttet eller nullstilt.",
+            f"{stand} gikk bakover ({_norsk(stand_start)} → {_norsk(stand_slutt)} kWh). "
+            f"{enhet} kan være byttet eller nullstilt.",
         )
     return MaalerForbruk(avrund(_dec(stand_slutt) - _dec(stand_start), 1), None)
 
@@ -150,6 +157,7 @@ def sjekk_rimelighet(
     snitt: float,
     forrige_kwh: float | None,
     grenser: Grenser,
+    ekstra_kwh: float = 0.0,
 ) -> list[str]:
     """Returnerer en liste med meldinger, én per brutt regel (tom = alt OK)."""
     brudd: list[str] = []
@@ -164,9 +172,10 @@ def sjekk_rimelighet(
         )
     if leilighet_kwh <= 0:
         brudd.append("Leilighetens forbruk er 0 kWh eller negativt")
-    elif leilighet_kwh > hus_kwh:
+    elif leilighet_kwh + ekstra_kwh > hus_kwh:
+        med_lader = f" og laderens {_norsk(ekstra_kwh)} kWh" if ekstra_kwh else ""
         brudd.append(
-            f"Leilighetens forbruk {_norsk(leilighet_kwh)} kWh er høyere enn husets "
+            f"Leilighetens forbruk {_norsk(leilighet_kwh)} kWh{med_lader} er høyere enn husets "
             f"{_norsk(hus_kwh)} kWh"
         )
     if forrige_kwh and forrige_kwh > 0:
@@ -188,12 +197,17 @@ def beregn_oppgjor(
     forfallsdag: int,
     naa: datetime,
     kilde: str,
+    lader_kwh: float | None = None,
 ) -> dict[str, Any]:
-    """Bygger en periode (se datamodellen i README) fra husets månedstall."""
+    """Bygger en periode (se datamodellen i README) fra husets månedstall.
+
+    Laderen (valgfri) regnes med samme snittpris som leiligheten. Hver linje avrundes til hele
+    øre for seg, og ``belop`` er summen av linjene, slik at regnestykket på papiret går opp.
+    """
     start, slutt = periode_start_slutt(periode_id)
     snitt = float(maned["snitt"])
     leilighet_kwh = avrund(leilighet_kwh, 1)  # beløpet regnes fra tallet som vises
-    return {
+    periode = {
         "id": periode_id,
         "start": start.isoformat(),
         "slutt": slutt.isoformat(),
@@ -213,6 +227,25 @@ def beregn_oppgjor(
         "kilde": kilde,
         "notat": "",
     }
+    if lader_kwh is not None:
+        lader_kwh = avrund(lader_kwh, 1)
+        belop_leilighet = periode["belop"]
+        lader_belop = beregn_belop(lader_kwh, snitt)
+        periode["leilighet_belop"] = belop_leilighet
+        periode["lader_kwh"] = lader_kwh
+        periode["lader_belop"] = lader_belop
+        periode["belop"] = avrund(_dec(belop_leilighet) + _dec(lader_belop), 2)
+    return periode
+
+
+def leilighet_belop(periode: dict[str, Any]) -> float:
+    """Beløpet for leiligheten alene (hele beløpet i perioder uten lader)."""
+    return float(periode.get("leilighet_belop", periode["belop"]))
+
+
+def har_lader(periode: dict[str, Any]) -> bool:
+    """Har perioden forbruk på laderen som skal vises (mer enn 0 kWh)?"""
+    return bool(periode.get("lader_kwh"))
 
 
 def auto_status(periode: dict[str, Any], idag: date) -> str:

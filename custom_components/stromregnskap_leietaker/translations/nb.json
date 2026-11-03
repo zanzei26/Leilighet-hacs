@@ -35,7 +35,9 @@
           "ent_effekt": "Øyeblikkseffekt (W)",
           "ent_prognose": "Forbruksprognose",
           "varsel_tjeneste": "Varslingstjeneste til utleier (notify.navn)",
-          "maaler_start_stand": "Målerstand ved start av denne måneden (kWh)"
+          "maaler_start_stand": "Målerstand ved start av denne måneden (kWh)",
+          "lader_aktiv": "Ta med elbil-lader (valgfritt)",
+          "ent_lader": "Laderens teller (akkumulert kWh)"
         },
         "data_description": {
           "ent_regnskap": "Sensoren med husets strømtall per måned. Den må ha attributtet «maneder» (liste over avsluttede måneder, hver med mnd, kwh, kraft, nettleie, norgespris, sum og snitt, og gjerne leilighet_kwh) og «denne_maneden» (samme felter for måneden som pågår). Husets snittpris hentes bare herfra.",
@@ -44,7 +46,9 @@
           "ent_effekt": "Leilighetens øyeblikkseffekt i W. Brukes bare til visning (som attributtet effekt_w) og påvirker ikke oppgjøret.",
           "ent_prognose": "Sensoren som sier hvor mye forbruket ventes å endre seg mot forrige måned, i prosent. Den må ha attributtet «endring_prosent». Brukes bare til månedsestimatet (forrige måneds kWh × (1 + prosent/100)). Mangler den, vises ikke noe estimat.",
           "varsel_tjeneste": "Hvor varsler til deg som utleier sendes, for eksempel når et oppgjør venter på godkjenning eller e-post feiler. Skriv tjenesten som notify.navn. Navnene finner du under Utviklerverktøy → Handlinger ved å søke på «notify». Tjenesten må finnes for at du skal komme videre.",
-          "maaler_start_stand": "Brukes bare første gang, hvis Home Assistant ikke har historikk for målerstanden fra starten av denne måneden. En ny måler som startet på 0 skal stå på 0. Senere månedsskifter leses automatisk av måleren."
+          "maaler_start_stand": "Brukes bare første gang, hvis Home Assistant ikke har historikk for målerstanden fra starten av denne måneden. En ny måler som startet på 0 skal stå på 0. Senere månedsskifter leses automatisk av måleren.",
+          "lader_aktiv": "Slå på hvis leietaker også bruker en elbil-lader som ikke går gjennom leilighetens måler. Forbruket regnes da med samme snittpris som resten og vises som egen linje på fakturagrunnlaget. Av som standard.",
+          "ent_lader": "Laderens energiteller i kWh som aldri nullstilles, for eksempel «Levetidsforbruk» fra Easee. Forbruket i en måned er telleren ved månedsskiftet minus telleren ved forrige månedsskifte. Brukes bare når laderen er slått på."
         }
       },
       "epost": {
@@ -134,7 +138,8 @@
       "kjoredag_rekkefolge": "Siste sjekkdag kan ikke komme før første kjøredag.",
       "smtp_auth": "Innlogging avvist. Sjekk brukernavn og app-passord.",
       "smtp_connect": "Kunne ikke nå SMTP-serveren. Sjekk server og port.",
-      "smtp_send": "SMTP-serveren avviste test-e-posten."
+      "smtp_send": "SMTP-serveren avviste test-e-posten.",
+      "lader_mangler": "Velg laderens teller når laderen er slått på."
     },
     "abort": {
       "single_instance_allowed": "Strømregnskap leietaker er allerede satt opp.",
@@ -186,7 +191,9 @@
           "ent_effekt": "Øyeblikkseffekt (W)",
           "ent_prognose": "Forbruksprognose",
           "varsel_tjeneste": "Varslingstjeneste til utleier (notify.navn)",
-          "maaler_start_stand": "Målerstand ved start av denne måneden (kWh)"
+          "maaler_start_stand": "Målerstand ved start av denne måneden (kWh)",
+          "lader_aktiv": "Ta med elbil-lader (valgfritt)",
+          "ent_lader": "Laderens teller (akkumulert kWh)"
         },
         "data_description": {
           "ent_regnskap": "Sensoren med husets strømtall per måned. Den må ha attributtet «maneder» (liste over avsluttede måneder, hver med mnd, kwh, kraft, nettleie, norgespris, sum og snitt, og gjerne leilighet_kwh) og «denne_maneden» (samme felter for måneden som pågår). Husets snittpris hentes bare herfra.",
@@ -195,7 +202,9 @@
           "ent_effekt": "Leilighetens øyeblikkseffekt i W. Brukes bare til visning (som attributtet effekt_w) og påvirker ikke oppgjøret.",
           "ent_prognose": "Sensoren som sier hvor mye forbruket ventes å endre seg mot forrige måned, i prosent. Den må ha attributtet «endring_prosent». Brukes bare til månedsestimatet (forrige måneds kWh × (1 + prosent/100)). Mangler den, vises ikke noe estimat.",
           "varsel_tjeneste": "Hvor varsler til deg som utleier sendes, for eksempel når et oppgjør venter på godkjenning eller e-post feiler. Skriv tjenesten som notify.navn. Navnene finner du under Utviklerverktøy → Handlinger ved å søke på «notify». Tjenesten må finnes for at du skal komme videre.",
-          "maaler_start_stand": "Brukes bare første gang, hvis Home Assistant ikke har historikk for målerstanden fra starten av denne måneden. En ny måler som startet på 0 skal stå på 0. Senere månedsskifter leses automatisk av måleren."
+          "maaler_start_stand": "Brukes bare første gang, hvis Home Assistant ikke har historikk for målerstanden fra starten av denne måneden. En ny måler som startet på 0 skal stå på 0. Senere månedsskifter leses automatisk av måleren.",
+          "lader_aktiv": "Slå på hvis leietaker også bruker en elbil-lader som ikke går gjennom leilighetens måler. Forbruket regnes da med samme snittpris som resten og vises som egen linje på fakturagrunnlaget. Av som standard.",
+          "ent_lader": "Laderens energiteller i kWh som aldri nullstilles, for eksempel «Levetidsforbruk» fra Easee. Forbruket i en måned er telleren ved månedsskiftet minus telleren ved forrige månedsskifte. Brukes bare når laderen er slått på."
         },
         "description": "Integrasjonen regner ikke ut husets strømpris selv. Den leser ferdige tall fra sensorer du allerede har, og du velger her hvilke.\n\n**Må være riktige for at oppgjør kan lages:** strømregnskapet (husets tall), måleren (leilighetens forbruk) og varslingstjenesten. Utility_meter brukes til kontroll.\n\n**Bare til visning og estimat:** effekt og prognose. Skjemaet krever at du velger en sensor for begge, men de påvirker ikke selve oppgjøret.\n\nStandardverdiene passer det opprinnelige oppsettet."
       },
@@ -260,7 +269,8 @@
       "kjoredag_rekkefolge": "Siste sjekkdag kan ikke komme før første kjøredag.",
       "smtp_auth": "Innlogging avvist. Sjekk brukernavn og app-passord.",
       "smtp_connect": "Kunne ikke nå SMTP-serveren. Sjekk server og port.",
-      "smtp_send": "SMTP-serveren avviste test-e-posten."
+      "smtp_send": "SMTP-serveren avviste test-e-posten.",
+      "lader_mangler": "Velg laderens teller når laderen er slått på."
     }
   },
   "issues": {
@@ -418,6 +428,10 @@
         "stand": {
           "name": "Målerstand (kWh)",
           "description": "Det måleren viste ved månedsskiftet."
+        },
+        "maaler": {
+          "name": "Måler",
+          "description": "Hvilken teller målerstanden gjelder: «leilighet» (standard) eller «lader». «lader» krever at laderen er slått på i oppsettet."
         }
       }
     },

@@ -13,6 +13,7 @@ from email.message import EmailMessage
 from html import escape
 from typing import Any
 
+from .calc import har_lader, leilighet_belop
 from .page import fmt_dato, fmt_kwh, fmt_tall, maaned_tekst
 
 SMTP_TIMEOUT = 30
@@ -57,6 +58,23 @@ def bygg_epost(
     forfall = fmt_dato(periode["forfall"])
     merking = f"Strøm – {maaned}"
     konto = utleier["kontonummer"]
+    # elbil-lader (valgfri): egne linjer, og beløpet delt i leilighet og lader
+    lader_forbruk = lader_belop = ""
+    lader_forbruk_html = lader_belop_html = ""
+    if har_lader(periode):
+        lader_kwh = f"{fmt_kwh(periode['lader_kwh'])} kWh"
+        b_leil = f"{fmt_tall(leilighet_belop(periode), 2)} kr"
+        b_lader = f"{fmt_tall(periode['lader_belop'], 2)} kr"
+        lader_forbruk = f"\nElbil-lader: {lader_kwh}"
+        lader_belop = f"\nBeløp leilighet: {b_leil}\nBeløp elbil-lader: {b_lader}"
+        rad = '<tr><td style="padding:2px 16px 2px 0;color:#5c6670">{}</td><td><strong>{}</strong></td></tr>'
+        lader_forbruk_html = "\n" + rad.format("Elbil-lader", escape(lader_kwh))
+        lader_belop_html = (
+            "\n"
+            + rad.format("Beløp leilighet", escape(b_leil))
+            + "\n"
+            + rad.format("Beløp elbil-lader", escape(b_lader))
+        )
 
     forklaring = (
         "Beløpet er ditt målte forbruk multiplisert med husets faktiske snittpris for måneden."
@@ -76,8 +94,8 @@ def bygg_epost(
 
 Her er strømoppgjøret for {maaned}.
 
-Ditt forbruk: {kwh}
-Husets snittpris: {snitt}
+Ditt forbruk: {kwh}{lader_forbruk}
+Husets snittpris: {snitt}{lader_belop}
 Beløp å betale: {belop}
 Forfall: {forfall}
 
@@ -94,8 +112,8 @@ Hilsen
 <p>Hei {e(fornavn)},</p>
 <p>Her er strømoppgjøret for <strong>{e(maaned)}</strong>.</p>
 <table style="border-collapse:collapse">
-<tr><td style="padding:2px 16px 2px 0;color:#5c6670">Ditt forbruk</td><td><strong>{e(kwh)}</strong></td></tr>
-<tr><td style="padding:2px 16px 2px 0;color:#5c6670">Husets snittpris</td><td><strong>{e(snitt)}</strong></td></tr>
+<tr><td style="padding:2px 16px 2px 0;color:#5c6670">Ditt forbruk</td><td><strong>{e(kwh)}</strong></td></tr>{lader_forbruk_html}
+<tr><td style="padding:2px 16px 2px 0;color:#5c6670">Husets snittpris</td><td><strong>{e(snitt)}</strong></td></tr>{lader_belop_html}
 <tr><td style="padding:2px 16px 2px 0;color:#5c6670">Beløp å betale</td><td><strong>{e(belop)}</strong></td></tr>
 <tr><td style="padding:2px 16px 2px 0;color:#5c6670">Forfall</td><td><strong>{e(forfall)}</strong></td></tr>
 </table>
@@ -180,13 +198,19 @@ def bygg_kopipost(
     """
     maaned = maaned_tekst(periode["id"])
     liste = "\n".join(f"- {navn}" for navn, _, _ in vedlegg)
+    lader = ""
+    if har_lader(periode):
+        lader = (
+            f"\nElbil-lader: {fmt_kwh(periode['lader_kwh'])} kWh × "
+            f"{fmt_tall(periode['snitt'], 4)} kr/kWh = {fmt_tall(periode['lader_belop'], 2)} kr"
+        )
     tekst = f"""Hei {_fornavn(utleier["navn"])},
 
 Dette er en kopi til deg som utleier. Oppgjøret for {maaned} er laget og sendt til \
 {leietaker["navn"]} ({leietaker["epost"]}).
 
 Beløp: {fmt_tall(periode["belop"], 2)} kr
-Forbruk: {fmt_kwh(periode["leilighet_kwh"])} kWh × {fmt_tall(periode["snitt"], 4)} kr/kWh
+Forbruk: {fmt_kwh(periode["leilighet_kwh"])} kWh × {fmt_tall(periode["snitt"], 4)} kr/kWh{lader}
 Forfall: {fmt_dato(periode["forfall"])}
 
 Vedlagt:
