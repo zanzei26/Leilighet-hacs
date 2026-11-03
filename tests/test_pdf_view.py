@@ -98,3 +98,18 @@ async def test_ingen_nedlasting_naar_siden_ikke_publiseres(hass, integrasjon, ha
     )
     await hass.async_block_till_done()
     assert (await klient.get(REGNSKAP)).status == 404
+
+
+async def test_knappene_paa_den_publiserte_siden_peker_til_pdf_er_som_virker(
+    hass, integrasjon, hass_client_no_auth
+):
+    import re
+
+    klient = await hass_client_no_auth()
+    html = await (await klient.get(f"/local/{SLUG}/index.html")).text()
+    lenker = re.findall(r'href="(/stromregnskap/[^"]+\.pdf)"', html)
+    assert f"/stromregnskap/{SLUG}/regnskap-strom-leilighet.pdf" in lenker
+    assert f"/stromregnskap/{SLUG}/fakturagrunnlag-strom-leilighet-2026-10.pdf" in lenker
+    for lenke in lenker:
+        svar = await klient.get(lenke)
+        assert svar.status == 200 and svar.content_type == "application/pdf", lenke

@@ -11,6 +11,7 @@ from decimal import Decimal
 from typing import Any
 
 from .calc import STATUS_BETALT, STATUS_VENTER, avrund, utestaaende
+from .filnavn import REGNSKAPSNAVN, fakturanavn  # noqa: F401 - gjeneksporteres
 from .page import fmt_dato, fmt_kwh, fmt_tall, maaned_tekst, periode_tekst
 from .pdf import (
     A4_BREDDE,
@@ -21,16 +22,10 @@ from .pdf import (
     tekstbredde,
 )
 
-REGNSKAPSNAVN = "regnskap-strom-leilighet.pdf"
-
 M = 50.0  # venstre marg
 H = A4_BREDDE - M  # høyre kant
 MAKS_Y = A4_HOYDE - 70  # nederste y for innhold; bunnteksten ligger under
 RAD = 14.0
-
-
-def fakturanavn(periode_id: str) -> str:
-    return f"fakturagrunnlag-strom-leilighet-{periode_id}.pdf"
 
 
 def _status(p: dict[str, Any]) -> str:

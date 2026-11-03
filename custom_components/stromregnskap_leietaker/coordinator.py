@@ -249,6 +249,7 @@ class StromregnskapCoordinator(
                 "hittil": hittil,
                 "estimat": estimat,
                 "oppdatert": naa,
+                "pdf_base": f"/stromregnskap/{self.cfg[CONF_SLUG]}",
             }
         )
         await self.hass.async_add_executor_job(skriv_atomisk, self.side_sti, html)
