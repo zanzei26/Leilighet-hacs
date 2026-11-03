@@ -8,10 +8,10 @@ lagring skrives i tillegg en rullerende JSON-sikkerhetskopi. Er hovedlageret bor
 
 from __future__ import annotations
 
-from copy import deepcopy
 import hashlib
 import json
 import logging
+from copy import deepcopy
 from typing import Any
 
 from homeassistant.core import HomeAssistant

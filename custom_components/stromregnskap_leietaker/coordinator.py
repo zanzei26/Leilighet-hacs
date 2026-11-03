@@ -43,6 +43,7 @@ from .filer import skriv_atomisk
 from .generering import GenereringMixin, ManglerData
 from .handlinger import HandlingerMixin
 from .kilder import Kilder, bygg_data
+from .maaler import MaalerMixin
 from .page import render_side
 from .storage import Lager
 from .url import bygg_side_url
@@ -52,7 +53,11 @@ _LOGGER = logging.getLogger(__name__)
 
 
 class StromregnskapCoordinator(
-    GenereringMixin, EpostMixin, HandlingerMixin, DataUpdateCoordinator[dict[str, Any]]
+    GenereringMixin,
+    EpostMixin,
+    HandlingerMixin,
+    MaalerMixin,
+    DataUpdateCoordinator[dict[str, Any]],
 ):
     """Oppdateres hver time. Lager oppgjør i kjørevinduet og holder siden à jour."""
 
@@ -124,6 +129,10 @@ class StromregnskapCoordinator(
     async def _async_update_data(self) -> dict[str, Any]:
         naa = dt_util.now()
         self._forsokt_na.clear()
+        try:
+            await self.async_fang_maalerstand(naa)
+        except Exception:  # noqa: BLE001 - skal ikke stoppe resten
+            _LOGGER.exception("Kunne ikke sikre målerstand for måneden")
         await self._oppdater_status(naa)
         try:
             await self._prov_automatisk(naa)

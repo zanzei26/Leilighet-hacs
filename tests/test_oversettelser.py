@@ -186,7 +186,11 @@ def test_kildene_forklarer_hva_sensoren_maa_inneholde_og_hva_den_brukes_til():
     assert "snittpris" in d["ent_regnskap"]
     assert "last_period" in d["ent_utility"] and "nullstilles" in d["ent_utility"]
     assert "endring_prosent" in d["ent_prognose"] and "estimat" in d["ent_prognose"].lower()
-    assert "bare" in d["ent_import"] and "bare" in d["ent_effekt"]  # kun til visning
+    assert "bare" in d["ent_effekt"]  # kun til visning
+    assert (
+        "månedsskifte" in d["ent_import"] and "aldri" in d["ent_import"]
+    )  # hovedkilden til forbruk
+    assert "første gang" in d["maaler_start_stand"] and "0" in d["maaler_start_stand"]
     assert "notify." in d["varsel_tjeneste"] and "Handlinger" in d["varsel_tjeneste"]
 
 

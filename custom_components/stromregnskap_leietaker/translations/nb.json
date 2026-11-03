@@ -27,22 +27,24 @@
       },
       "kilder": {
         "title": "Datakilder",
-        "description": "Integrasjonen regner ikke ut husets strømpris selv. Den leser ferdige tall fra sensorer du allerede har, og du velger her hvilke.\n\n**Må være riktige for at oppgjør kan lages:** strømregnskapet og varslingstjenesten. Leilighetens forbruk brukes til kontroll og til «hittil»-tallene.\n\n**Bare til visning og estimat:** rå måler, effekt og prognose. Skjemaet krever at du velger en sensor for alle, men disse tre påvirker ikke selve oppgjøret.\n\nStandardverdiene passer det opprinnelige oppsettet.",
+        "description": "Integrasjonen regner ikke ut husets strømpris selv. Den leser ferdige tall fra sensorer du allerede har, og du velger her hvilke.\n\n**Må være riktige for at oppgjør kan lages:** strømregnskapet (husets tall), måleren (leilighetens forbruk) og varslingstjenesten. Utility_meter brukes til kontroll.\n\n**Bare til visning og estimat:** effekt og prognose. Skjemaet krever at du velger en sensor for begge, men de påvirker ikke selve oppgjøret.\n\nStandardverdiene passer det opprinnelige oppsettet.",
         "data": {
           "ent_regnskap": "Strømregnskap (husets månedstall)",
           "ent_utility": "Leilighetens forbruk denne måneden (utility_meter)",
           "ent_import": "Rå måler, akkumulert kWh",
           "ent_effekt": "Øyeblikkseffekt (W)",
           "ent_prognose": "Forbruksprognose",
-          "varsel_tjeneste": "Varslingstjeneste til utleier (notify.navn)"
+          "varsel_tjeneste": "Varslingstjeneste til utleier (notify.navn)",
+          "maaler_start_stand": "Målerstand ved start av denne måneden (kWh)"
         },
         "data_description": {
           "ent_regnskap": "Sensoren med husets strømtall per måned. Den må ha attributtet «maneder» (liste over avsluttede måneder, hver med mnd, kwh, kraft, nettleie, norgespris, sum og snitt, og gjerne leilighet_kwh) og «denne_maneden» (samme felter for måneden som pågår). Husets snittpris hentes bare herfra.",
-          "ent_utility": "Leilighetens forbruk hittil denne måneden i kWh, fra en måler som nullstilles hver måned (en utility_meter med månedlig syklus). Attributtet «last_period» (forrige måneds sluttverdi) brukes til å kontrollere kWh i oppgjøret.",
-          "ent_import": "Leilighetens rå, akkumulerte målerstand i kWh. Brukes bare til visning (som attributtet maaler_total_kwh) og påvirker ikke oppgjøret.",
+          "ent_utility": "Leilighetens forbruk hittil denne måneden i kWh, fra en måler som nullstilles hver måned (en utility_meter med månedlig syklus). Brukes som kontroll mot målerstandene (attributtet «last_period» er forrige måneds sluttverdi) og til «hittil»-tallene.",
+          "ent_import": "Leilighetens målerstand i kWh, slik måleren selv teller opp (den nullstilles aldri). Dette er hovedkilden til forbruket: forbruket i en måned er målerstanden ved månedsskiftet minus målerstanden ved forrige månedsskifte. Integrasjonen lagrer målerstanden ved hvert månedsskifte.",
           "ent_effekt": "Leilighetens øyeblikkseffekt i W. Brukes bare til visning (som attributtet effekt_w) og påvirker ikke oppgjøret.",
           "ent_prognose": "Sensoren som sier hvor mye forbruket ventes å endre seg mot forrige måned, i prosent. Den må ha attributtet «endring_prosent». Brukes bare til månedsestimatet (forrige måneds kWh × (1 + prosent/100)). Mangler den, vises ikke noe estimat.",
-          "varsel_tjeneste": "Hvor varsler til deg som utleier sendes, for eksempel når et oppgjør venter på godkjenning eller e-post feiler. Skriv tjenesten som notify.navn. Navnene finner du under Utviklerverktøy → Handlinger ved å søke på «notify». Tjenesten må finnes for at du skal komme videre."
+          "varsel_tjeneste": "Hvor varsler til deg som utleier sendes, for eksempel når et oppgjør venter på godkjenning eller e-post feiler. Skriv tjenesten som notify.navn. Navnene finner du under Utviklerverktøy → Handlinger ved å søke på «notify». Tjenesten må finnes for at du skal komme videre.",
+          "maaler_start_stand": "Brukes bare første gang, hvis Home Assistant ikke har historikk for målerstanden fra starten av denne måneden. En ny måler som startet på 0 skal stå på 0. Senere månedsskifter leses automatisk av måleren."
         }
       },
       "epost": {
@@ -181,17 +183,19 @@
           "ent_import": "Rå måler, akkumulert kWh",
           "ent_effekt": "Øyeblikkseffekt (W)",
           "ent_prognose": "Forbruksprognose",
-          "varsel_tjeneste": "Varslingstjeneste til utleier (notify.navn)"
+          "varsel_tjeneste": "Varslingstjeneste til utleier (notify.navn)",
+          "maaler_start_stand": "Målerstand ved start av denne måneden (kWh)"
         },
         "data_description": {
           "ent_regnskap": "Sensoren med husets strømtall per måned. Den må ha attributtet «maneder» (liste over avsluttede måneder, hver med mnd, kwh, kraft, nettleie, norgespris, sum og snitt, og gjerne leilighet_kwh) og «denne_maneden» (samme felter for måneden som pågår). Husets snittpris hentes bare herfra.",
-          "ent_utility": "Leilighetens forbruk hittil denne måneden i kWh, fra en måler som nullstilles hver måned (en utility_meter med månedlig syklus). Attributtet «last_period» (forrige måneds sluttverdi) brukes til å kontrollere kWh i oppgjøret.",
-          "ent_import": "Leilighetens rå, akkumulerte målerstand i kWh. Brukes bare til visning (som attributtet maaler_total_kwh) og påvirker ikke oppgjøret.",
+          "ent_utility": "Leilighetens forbruk hittil denne måneden i kWh, fra en måler som nullstilles hver måned (en utility_meter med månedlig syklus). Brukes som kontroll mot målerstandene (attributtet «last_period» er forrige måneds sluttverdi) og til «hittil»-tallene.",
+          "ent_import": "Leilighetens målerstand i kWh, slik måleren selv teller opp (den nullstilles aldri). Dette er hovedkilden til forbruket: forbruket i en måned er målerstanden ved månedsskiftet minus målerstanden ved forrige månedsskifte. Integrasjonen lagrer målerstanden ved hvert månedsskifte.",
           "ent_effekt": "Leilighetens øyeblikkseffekt i W. Brukes bare til visning (som attributtet effekt_w) og påvirker ikke oppgjøret.",
           "ent_prognose": "Sensoren som sier hvor mye forbruket ventes å endre seg mot forrige måned, i prosent. Den må ha attributtet «endring_prosent». Brukes bare til månedsestimatet (forrige måneds kWh × (1 + prosent/100)). Mangler den, vises ikke noe estimat.",
-          "varsel_tjeneste": "Hvor varsler til deg som utleier sendes, for eksempel når et oppgjør venter på godkjenning eller e-post feiler. Skriv tjenesten som notify.navn. Navnene finner du under Utviklerverktøy → Handlinger ved å søke på «notify». Tjenesten må finnes for at du skal komme videre."
+          "varsel_tjeneste": "Hvor varsler til deg som utleier sendes, for eksempel når et oppgjør venter på godkjenning eller e-post feiler. Skriv tjenesten som notify.navn. Navnene finner du under Utviklerverktøy → Handlinger ved å søke på «notify». Tjenesten må finnes for at du skal komme videre.",
+          "maaler_start_stand": "Brukes bare første gang, hvis Home Assistant ikke har historikk for målerstanden fra starten av denne måneden. En ny måler som startet på 0 skal stå på 0. Senere månedsskifter leses automatisk av måleren."
         },
-        "description": "Integrasjonen regner ikke ut husets strømpris selv. Den leser ferdige tall fra sensorer du allerede har, og du velger her hvilke.\n\n**Må være riktige for at oppgjør kan lages:** strømregnskapet og varslingstjenesten. Leilighetens forbruk brukes til kontroll og til «hittil»-tallene.\n\n**Bare til visning og estimat:** rå måler, effekt og prognose. Skjemaet krever at du velger en sensor for alle, men disse tre påvirker ikke selve oppgjøret.\n\nStandardverdiene passer det opprinnelige oppsettet."
+        "description": "Integrasjonen regner ikke ut husets strømpris selv. Den leser ferdige tall fra sensorer du allerede har, og du velger her hvilke.\n\n**Må være riktige for at oppgjør kan lages:** strømregnskapet (husets tall), måleren (leilighetens forbruk) og varslingstjenesten. Utility_meter brukes til kontroll.\n\n**Bare til visning og estimat:** effekt og prognose. Skjemaet krever at du velger en sensor for begge, men de påvirker ikke selve oppgjøret.\n\nStandardverdiene passer det opprinnelige oppsettet."
       },
       "epost": {
         "title": "E-post (SMTP)",

@@ -130,6 +130,7 @@ async def test_last_period_brukes_naar_maned_mangler_leilighet_kwh(hass, oppsett
     o = oppsett
     uten = {k: v for k, v in NOV_HUS.items() if k not in ("leilighet_kwh", "leilighet_kr")}
     sett_kilder(hass, maneder=[SEP_HUS, OKT_HUS, uten], last_period="248.0")
+    o.lager.data["maalerstander"]["2026-12-01"]["stand"] = 248.0  # målerstandene stemmer med den
     await o.coordinator.async_refresh()
     p = o.lager.finn("2026-11")
     assert p["leilighet_kwh"] == 248.0
@@ -141,6 +142,7 @@ async def test_ingen_kilde_for_leilighetens_kwh_regnes_som_manglende_data(hass, 
     o = oppsett
     uten = {k: v for k, v in NOV_HUS.items() if k not in ("leilighet_kwh", "leilighet_kr")}
     sett_kilder(hass, maneder=[SEP_HUS, OKT_HUS, uten], last_period="unavailable")
+    o.lager.data["maalerstander"] = {}  # og ingen målerstander heller: ingen kilde i det hele tatt
     await o.coordinator.async_refresh()
     assert o.lager.finn("2026-11") is None
 

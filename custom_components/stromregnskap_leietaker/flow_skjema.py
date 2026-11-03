@@ -37,6 +37,7 @@ from .const import (
     CONF_KONTONUMMER,
     CONF_LEIETAKER_EPOST,
     CONF_LEIETAKER_NAVN,
+    CONF_MAALER_START_STAND,
     CONF_PUBLISER_SIDE,
     CONF_SEND_TEST,
     CONF_SISTE_SJEKKDAG,
@@ -58,6 +59,7 @@ from .const import (
     DEFAULT_FORFALLSDAG,
     DEFAULT_KJOREDAG,
     DEFAULT_KJORETID,
+    DEFAULT_MAALER_START_STAND,
     DEFAULT_SISTE_SJEKKDAG,
     DEFAULT_SMTP_HOST,
     DEFAULT_SMTP_PORT,
@@ -120,6 +122,10 @@ def schema_kilder(d: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 CONF_ENT_IMPORT, default=d.get(CONF_ENT_IMPORT, DEFAULT_ENT_IMPORT)
             ): _sensor(),
+            vol.Required(
+                CONF_MAALER_START_STAND,
+                default=d.get(CONF_MAALER_START_STAND, DEFAULT_MAALER_START_STAND),
+            ): _tall(0, 100000000, 0.001),
             vol.Required(
                 CONF_ENT_EFFEKT, default=d.get(CONF_ENT_EFFEKT, DEFAULT_ENT_EFFEKT)
             ): _sensor(),
@@ -227,7 +233,7 @@ def normaliser(inn: dict[str, Any]) -> dict[str, Any]:
     for felt in (CONF_FORFALLSDAG, CONF_SMTP_PORT, CONF_KJOREDAG, CONF_SISTE_SJEKKDAG):
         if felt in ut:
             ut[felt] = int(ut[felt])
-    for felt in (CONF_SNITT_MIN, CONF_SNITT_MAKS, CONF_ENDRING_MAKS):
+    for felt in (CONF_SNITT_MIN, CONF_SNITT_MAKS, CONF_ENDRING_MAKS, CONF_MAALER_START_STAND):
         if felt in ut:
             ut[felt] = float(ut[felt])
     return ut

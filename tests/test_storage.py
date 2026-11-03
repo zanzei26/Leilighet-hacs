@@ -132,7 +132,9 @@ async def test_feil_ved_sikkerhetskopi_stopper_ikke_lagringen(hass, hass_storage
     ):
         await lager.async_lagre()  # skal ikke kaste
     assert "disken er full" in lager.kopi_feil
-    assert [p["id"] for p in hass_storage[NOKKEL]["data"]["perioder"]] == ["2026-10"]  # lagret likevel
+    assert [p["id"] for p in hass_storage[NOKKEL]["data"]["perioder"]] == [
+        "2026-10"
+    ]  # lagret likevel
     await lager.async_lagre()
     assert lager.kopi_feil is None  # og nullstilles når det virker igjen
 

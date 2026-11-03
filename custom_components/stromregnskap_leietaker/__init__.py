@@ -9,6 +9,7 @@ from datetime import datetime
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.typing import ConfigType
 from homeassistant.util import dt as dt_util
 
@@ -91,11 +92,18 @@ async def async_setup_entry(hass: HomeAssistant, entry: StromregnskapConfigEntry
     lager.data["utleier"] = coordinator.utleier
     await lager.async_lagre()
 
+    await coordinator.async_seed_maaler()
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = StromregnskapData(coordinator=coordinator, lager=lager)
 
     _registrer_side(hass, entry, coordinator)
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    # Rett etter midnatt: lagre målerstanden ved månedsskiftet (ellers hentes den senere)
+    entry.async_on_unload(
+        async_track_time_change(
+            hass, coordinator.async_fang_maalerstand, hour=0, minute=0, second=20
+        )
+    )
     entry.async_on_unload(entry.add_update_listener(_ved_endring))
     return True
 

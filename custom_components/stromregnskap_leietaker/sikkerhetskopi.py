@@ -6,10 +6,10 @@ Filnavn: data-ÅÅÅÅMMDD-TTMMSS.json (med _2, _3 … hvis flere i samme sekund
 
 from __future__ import annotations
 
-from datetime import datetime
 import json
 import os
 import re
+from datetime import datetime
 from typing import Any
 
 VERSJON = 1

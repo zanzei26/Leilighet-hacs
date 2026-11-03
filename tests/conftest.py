@@ -1,5 +1,6 @@
 """Felles testoppsett."""
 
+from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -9,7 +10,7 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry, async_
 from custom_components.stromregnskap_leietaker.const import DOMAIN
 from custom_components.stromregnskap_leietaker.storage import Lager
 
-from .data import CFG, perioder, sett_kilder
+from .data import CFG, MAALERSTANDER, perioder, sett_kilder
 
 
 @pytest.fixture(autouse=True)
@@ -34,6 +35,7 @@ async def oppsett(hass, hass_storage, tmp_path, freezer):
     await lager.async_last()
     for p in perioder():
         lager.legg_til(p)
+    lager.data["maalerstander"] = deepcopy(MAALERSTANDER)
     sett_kilder(hass)
     varsler = async_mock_service(hass, "notify", "varsle_magnar")
 
@@ -75,6 +77,10 @@ async def integrasjon(hass, hass_storage, tmp_path, freezer):
     ):
         assert await hass.config_entries.async_setup(entry.entry_id)
         await hass.async_block_till_done()
+        # måleren ved neste månedsskifte, så manuell generering for november kan bruke den
+        entry.runtime_data.lager.data["maalerstander"]["2026-12-01"] = deepcopy(
+            MAALERSTANDER["2026-12-01"]
+        )
         yield SimpleNamespace(
             entry=entry, epost=epost, varsler=varsler, tmp=tmp_path, freezer=freezer
         )

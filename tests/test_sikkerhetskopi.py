@@ -46,7 +46,9 @@ def test_ødelagt_nyeste_kopi_hoppes_over(tmp_path):
     mappe = str(tmp_path)
     skriv_kopi(mappe, DATA, _t(1))
     (tmp_path / "data-20261205-080000.json").write_text("{ikke json", encoding="utf-8")
-    (tmp_path / "data-20261204-080000.json").write_text('{"versjon":1,"data":"feil"}', encoding="utf-8")
+    (tmp_path / "data-20261204-080000.json").write_text(
+        '{"versjon":1,"data":"feil"}', encoding="utf-8"
+    )
     navn, data = les_siste_gyldige(mappe)
     assert navn == "data-20261201-080000.json" and data == DATA
 

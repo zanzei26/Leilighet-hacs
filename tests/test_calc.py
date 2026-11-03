@@ -6,6 +6,7 @@ import pytest
 
 from custom_components.stromregnskap_leietaker.calc import (
     Grenser,
+    MaalerForbruk,
     auto_status,
     beregn_belop,
     beregn_oppgjor,
@@ -13,6 +14,7 @@ from custom_components.stromregnskap_leietaker.calc import (
     forfall_for_periode,
     forrige_periode,
     forrige_periode_id,
+    maaler_forbruk,
     periode_start_slutt,
     sjekk_rimelighet,
     utestaaende,
@@ -262,3 +264,52 @@ def test_forrige_periode_er_den_nyeste_med_lavere_id():
 def test_forrige_periode_hopper_over_de_som_venter_godkjenning():
     ps = [_p("betalt") | {"id": "2026-09"}, _p("venter_godkjenning") | {"id": "2026-10"}]
     assert forrige_periode(ps, "2026-11")["id"] == "2026-09"
+
+
+# --- målerstander ---------------------------------------------------------------
+
+
+def test_maalerforbruk_er_differansen_mellom_to_avlesninger():
+    assert maaler_forbruk(0.0, 250.1234) == MaalerForbruk(250.123, None)
+    assert maaler_forbruk(1000.5, 1234.5) == MaalerForbruk(234.0, None)
+
+
+def test_maalerforbruk_er_null_hvis_stand_ikke_endret():
+    assert maaler_forbruk(100.0, 100.0) == MaalerForbruk(0.0, None)
+
+
+def test_maalerforbruk_mangler_en_avlesning_gir_ingen_verdi_og_ingen_feil():
+    assert maaler_forbruk(None, 10.0) == MaalerForbruk(None, None)
+    assert maaler_forbruk(10.0, None) == MaalerForbruk(None, None)
+
+
+def test_maalerstand_som_gaar_bakover_gir_feil_med_begge_tall():
+    r = maaler_forbruk(500.0, 120.5)
+    assert r.kwh is None
+    assert "500,0" in r.feil and "120,5" in r.feil
+
+
+def test_maaleren_er_primaerkilde_foran_sensorene():
+    valg = velg_leilighet_kwh(251.0, 250.0, maaler=250.2)
+    assert valg.kwh == 250.2
+    assert "maalerstander" in valg.kilde
+    assert "251,0" in valg.avvik  # 251,0 er 0,8 kWh fra målerverdien, over grensen på 0,5
+
+
+def test_maaleren_alene_er_nok():
+    valg = velg_leilighet_kwh(None, None, maaler=250.2)
+    assert valg.kwh == 250.2 and valg.avvik is None
+
+
+def test_alle_tre_kilder_som_stemmer_gir_ingen_avvik():
+    valg = velg_leilighet_kwh(250.0, 250.2, maaler=250.1)
+    assert valg.kwh == 250.1 and valg.avvik is None
+    assert "maalerstander" in valg.kilde and "last_period" in valg.kilde
+
+
+def test_avvik_mellom_maaler_og_sensor_lister_alle_tre_tall():
+    valg = velg_leilighet_kwh(250.0, 250.2, maaler=253.0)
+    assert valg.kwh == 253.0
+    for tall in ("253,0", "250,0", "250,2"):
+        assert tall in valg.avvik
+    assert "målerstander" in valg.avvik

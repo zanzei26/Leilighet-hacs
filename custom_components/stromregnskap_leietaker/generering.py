@@ -14,6 +14,7 @@ from .calc import (
     beregn_oppgjor,
     forrige_periode,
     forrige_periode_id,
+    periode_start_slutt,
     sjekk_rimelighet,
     velg_leilighet_kwh,
 )
@@ -85,7 +86,10 @@ class GenereringMixin:
         last_period = (
             self.kilder.last_period() if periode_id == forrige_periode_id(naa.date()) else None
         )
-        valg = velg_leilighet_kwh(til_float(maned.get("leilighet_kwh")), last_period)
+        maaler = self._maaler_forbruk(periode_id)
+        valg = velg_leilighet_kwh(
+            til_float(maned.get("leilighet_kwh")), last_period, maaler=maaler.kwh
+        )
         if valg.kwh is None:
             raise ManglerData(f"Leilighetens kWh for {periode_id} er ikke tilgjengelig.")
 
@@ -99,6 +103,14 @@ class GenereringMixin:
         )
         brudd: list[str] = []
         if not tving:
+            if maaler.feil:
+                brudd.append(maaler.feil)
+            elif maaler.kwh is None:
+                start, slutt = periode_start_slutt(periode_id)
+                brudd.append(
+                    f"Målerstand mangler ved {start:%d.%m.%Y} eller {slutt:%d.%m.%Y}. "
+                    "kWh er hentet fra regnskapssensoren og må kontrolleres."
+                )
             if valg.avvik:
                 brudd.append(valg.avvik)
             forrige = forrige_periode(self.lager.perioder, periode_id)
