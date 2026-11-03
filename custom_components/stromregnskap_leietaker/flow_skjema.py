@@ -35,6 +35,7 @@ from .const import (
     CONF_KJOREDAG,
     CONF_KJORETID,
     CONF_KONTONUMMER,
+    CONF_KOPI_TIL_UTLEIER,
     CONF_LEIETAKER_EPOST,
     CONF_LEIETAKER_NAVN,
     CONF_MAALER_START_STAND,
@@ -158,6 +159,9 @@ def schema_epost(d: dict[str, Any], *, passord_valgfritt: bool) -> vol.Schema:
             ): _tekst(),
             passord_noekkel: _tekst(type=TextSelectorType.PASSWORD),
             vol.Required(CONF_CC_UTLEIER, default=d.get(CONF_CC_UTLEIER, True)): BooleanSelector(),
+            vol.Required(
+                CONF_KOPI_TIL_UTLEIER, default=d.get(CONF_KOPI_TIL_UTLEIER, True)
+            ): BooleanSelector(),
             vol.Required(CONF_SEND_TEST, default=True): BooleanSelector(),
         }
     )

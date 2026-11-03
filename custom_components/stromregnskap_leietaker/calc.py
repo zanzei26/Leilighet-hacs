@@ -96,16 +96,21 @@ class MaalerForbruk:
 
 
 def maaler_forbruk(stand_start: float | None, stand_slutt: float | None) -> MaalerForbruk:
-    """Forbruk = målerstand ved slutten minus målerstand ved starten av perioden."""
+    """Forbruk = målerstand ved slutten minus målerstand ved starten av perioden.
+
+    Målerstandene rundes til én desimal (halvt opp) før differansen, slik at forbruket er
+    nøyaktig differansen av tallene som står på fakturagrunnlaget.
+    """
     if stand_start is None or stand_slutt is None:
         return MaalerForbruk(None, None)
+    stand_start, stand_slutt = avrund(stand_start, 1), avrund(stand_slutt, 1)
     if stand_slutt < stand_start:
         return MaalerForbruk(
             None,
             f"Målerstanden gikk bakover ({_norsk(stand_start)} → {_norsk(stand_slutt)} kWh). "
             "Måleren kan være byttet eller nullstilt.",
         )
-    return MaalerForbruk(avrund(_dec(stand_slutt) - _dec(stand_start), 3), None)
+    return MaalerForbruk(avrund(_dec(stand_slutt) - _dec(stand_start), 1), None)
 
 
 def velg_leilighet_kwh(
@@ -187,11 +192,12 @@ def beregn_oppgjor(
     """Bygger en periode (se datamodellen i README) fra husets månedstall."""
     start, slutt = periode_start_slutt(periode_id)
     snitt = float(maned["snitt"])
+    leilighet_kwh = avrund(leilighet_kwh, 1)  # beløpet regnes fra tallet som vises
     return {
         "id": periode_id,
         "start": start.isoformat(),
         "slutt": slutt.isoformat(),
-        "leilighet_kwh": float(leilighet_kwh),
+        "leilighet_kwh": leilighet_kwh,
         "hus_kwh": float(maned["kwh"]),
         "kraft": float(maned["kraft"]),
         "nettleie": float(maned["nettleie"]),

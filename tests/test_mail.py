@@ -8,6 +8,7 @@ import pytest
 from custom_components.stromregnskap_leietaker.mail import (
     SmtpFeil,
     bygg_epost,
+    bygg_kopipost,
     bygg_lenkepost,
     bygg_testepost,
     send_epost,
@@ -171,3 +172,56 @@ def test_lenkeposten_har_ingen_vedlegg_og_escaper_html():
     msg = _lenke(leietaker={**LEIETAKER, "navn": "<b>Eva</b>"})
     assert list(msg.iter_attachments()) == []
     assert "<b>Eva</b>" not in msg.get_body(("html",)).get_content()
+
+
+def test_epost_viser_kwh_med_en_desimal():
+    msg = _msg(periode={**OKT, "leilighet_kwh": 250.123})
+    assert "250,1 kWh" in msg.get_body(("plain",)).get_content()
+
+
+# --- kopi til utleier -----------------------------------------------------------------------
+
+
+VEDLEGG = [
+    ("fakturagrunnlag-strom-leilighet-2026-10.pdf", "application/pdf", b"%PDF-1.4 faktura"),
+    ("regnskap-strom-leilighet.pdf", "application/pdf", b"%PDF-1.4 regnskap"),
+    ("sikkerhetskopi.json", "application/json", b'{"data": {}}'),
+]
+
+
+def _kopi(**over):
+    args = dict(periode=OKT, leietaker=LEIETAKER, utleier=UTLEIER, vedlegg=VEDLEGG)
+    args.update(over)
+    return bygg_kopipost(**args)
+
+
+def test_kopien_har_emnet_fakturagrunnlag_strom_leilighet_og_gaar_bare_til_utleier():
+    msg = _kopi()
+    assert msg["Subject"] == "Fakturagrunnlag strøm leilighet – oktober 2026"
+    assert "ola@example.com" in msg["To"] and "ola@example.com" in msg["From"]
+    assert msg["Cc"] is None
+    assert "kari@example.com" not in str(msg["To"]) + str(msg["From"])
+
+
+def test_kopien_forklarer_hva_som_er_sendt_og_hva_vedleggene_er():
+    tekst = _kopi().get_body(("plain",)).get_content()
+    for forventet in (
+        "Kari Nordmann",
+        "kari@example.com",
+        "304,25 kr",
+        "15.11.2026",
+        "oktober 2026",
+        "fakturagrunnlag-strom-leilighet-2026-10.pdf",
+        "regnskap-strom-leilighet.pdf",
+        "sikkerhetskopi.json",
+        "Ta vare på",
+    ):
+        assert forventet in tekst, forventet
+
+
+def test_kopien_har_alle_vedlegg_med_riktig_innhold_og_type():
+    deler = list(_kopi().iter_attachments())
+    assert [(d.get_filename(), d.get_content_type()) for d in deler] == [
+        (navn, typen) for navn, typen, _ in VEDLEGG
+    ]
+    assert [d.get_content() for d in deler] == [data for _, _, data in VEDLEGG]

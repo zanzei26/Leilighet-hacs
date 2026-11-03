@@ -37,6 +37,7 @@ STEG_EPOST = {
     "smtp_bruker": "ola@example.com",
     "smtp_passord": "app-passord-test",
     "cc_utleier": True,
+    "kopi_til_utleier": True,
     "send_test": True,
 }
 STEG_GRENSER = {
@@ -104,7 +105,7 @@ async def test_hele_flyten_lager_entry_med_alle_valg(hass, smtp):
     assert r["title"] == "Strømregnskap leietaker"
     d = r["data"]
     assert d["leietaker_navn"] == "Kari Nordmann" and d["forfallsdag"] == 15
-    assert d["smtp_passord"] == "app-passord-test"
+    assert d["smtp_passord"] == "app-passord-test" and d["kopi_til_utleier"] is True
     assert "send_test" not in d
     assert d["importer_historikk"] is True and d["publiser_side"] is True
     assert len(d["slug"]) == 24 and d["slug"] in lenke

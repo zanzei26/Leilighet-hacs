@@ -33,6 +33,7 @@ async def test_alle_tjenester_er_registrert(hass, integrasjon):
         "send_lenke",
         "merk_betalt",
         "sett_malerstand",
+        "send_regnskap",
     }
     assert forventet <= set(hass.services.async_services()[DOMAIN])
 
@@ -218,3 +219,20 @@ async def test_sett_malerstand_tjenesten_avviser_ugyldig_dato_og_stand(hass, int
         await _kall(hass, "sett_malerstand", {"dato": "2026-12-15", "stand": 1})
     with pytest.raises(vol.Invalid):
         await _kall(hass, "sett_malerstand", {"dato": "2026-12-01"})  # stand mangler
+
+
+async def test_send_regnskap_tjenesten_sender_kopi_med_pdf_og_sikkerhetskopi(hass, integrasjon):
+    await _kall(hass, "send_regnskap")
+    msg = integrasjon.epost.call_args.kwargs["melding"]
+    assert "ola@example.com" in msg["To"] and msg["Subject"].startswith("Fakturagrunnlag strøm")
+    assert len(list(msg.iter_attachments())) == 3
+
+
+async def test_send_regnskap_tjenesten_med_periode_og_feil(hass, integrasjon):
+    await _kall(hass, "send_regnskap", {"periode": "2026-09"})
+    assert "september 2026" in integrasjon.epost.call_args.kwargs["melding"]["Subject"]
+    with pytest.raises(ServiceValidationError):
+        await _kall(hass, "send_regnskap", {"periode": "2099-01"})
+    integrasjon.epost.side_effect = SmtpFeil("connect", "nede")
+    with pytest.raises(HomeAssistantError):
+        await _kall(hass, "send_regnskap")

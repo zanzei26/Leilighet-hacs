@@ -2,7 +2,12 @@
 
 from copy import deepcopy
 
-from custom_components.stromregnskap_leietaker.page import fmt_dato, fmt_tall, render_side
+from custom_components.stromregnskap_leietaker.page import (
+    fmt_dato,
+    fmt_kwh,
+    fmt_tall,
+    render_side,
+)
 
 from .data import LEIETAKER, OKT, perioder, side_ctx
 
@@ -138,3 +143,49 @@ def test_ikke_betalt_og_unntak_vises_begge_som_ikke_betalt():
     ps[0]["status"] = "unntak_ikke_betalt"
     html = render_side(side_ctx(perioder=ps))
     assert "607,04" in html  # 302,79 + 304,25 regnes begge som utestående
+
+
+def test_kwh_vises_med_en_desimal_og_avrundes_halvt_opp():
+    assert fmt_kwh(234.0) == "234,0"
+    assert fmt_kwh(250.4) == "250,4"
+    assert fmt_kwh(250.123) == "250,1"
+    assert fmt_kwh(250.15) == "250,2"
+    assert fmt_kwh(1000.5) == "1\u00a0000,5"
+    assert fmt_kwh(0) == "0,0"
+
+
+def test_hittil_forbruket_vises_med_en_desimal():
+    html = render_side(side_ctx())
+    assert "21,9 kWh" in html and "21,85" not in html
+
+
+# --- PDF-knapper ----------------------------------------------------------------------
+
+
+def test_pdf_lenker_vises_per_periode_og_for_hele_regnskapet():
+    html = render_side(side_ctx(pdf_base="/stromregnskap/abc"))
+    for periode in ("2026-09", "2026-10"):
+        assert f'href="/stromregnskap/abc/fakturagrunnlag-strom-leilighet-{periode}.pdf"' in html
+    assert 'href="/stromregnskap/abc/regnskap-strom-leilighet.pdf"' in html
+    assert "Last ned hele regnskapet" in html
+
+
+def test_uten_pdf_base_vises_ingen_pdf_lenker():
+    import re
+
+    html = render_side(side_ctx())
+    assert re.search(r'href="[^"]*\.pdf"', html) is None and "Last ned" not in html
+
+
+def test_pdf_lenker_finnes_ikke_for_perioder_som_venter_paa_godkjenning():
+    ps = perioder()
+    ny = deepcopy(OKT)
+    ny.update({"id": "2026-11", "status": "venter_godkjenning"})
+    ps.append(ny)
+    html = render_side(side_ctx(perioder=ps, pdf_base="/stromregnskap/abc"))
+    assert "2026-11.pdf" not in html
+
+
+def test_siden_er_fortsatt_uten_javascript_og_eksterne_lenker_med_pdf_knapper():
+    html = render_side(side_ctx(pdf_base="/stromregnskap/abc"))
+    assert "<script" not in html and 'href="http' not in html and 'src="http' not in html

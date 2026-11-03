@@ -46,8 +46,8 @@ async def test_oppsett_importerer_historikk_og_lager_entiteter(
     assert hass.states.get("sensor.leietaker_utestaende").attributes["antall_perioder"] == 1
     assert hass.states.get("sensor.leietaker_siste_oppgjor").state == "304.25"
     assert hass.states.get("sensor.leietaker_siste_oppgjor").attributes["leilighet_kwh"] == 234.0
-    assert hass.states.get("sensor.leietaker_forbruk_hittil").state == "30.25"
-    assert hass.states.get("sensor.leietaker_kostnad_hittil").state == "40.0"
+    assert hass.states.get("sensor.leietaker_forbruk_hittil").state == "30.3"
+    assert hass.states.get("sensor.leietaker_kostnad_hittil").state == "45.45"
     assert hass.states.get("sensor.leietaker_estimat_maned").state == "371.18"
     assert hass.states.get("sensor.leietaker_estimat_maned").attributes["estimat_kwh"] == 285.48
     assert hass.states.get("binary_sensor.leietaker_oppgjor_venter_godkjenning").state == "off"
@@ -183,6 +183,7 @@ async def test_entitetene_samles_paa_en_enhet_og_navnene_dobles_ikke(
         "binary_sensor.leietaker_datagrunnlag",
         "button.leietaker_send_lenke",
         "button.leietaker_merk_som_betalt",
+        "button.leietaker_send_regnskap",
     }
     assert hass.states.get("sensor.leietaker_utestaende").name == "Leietaker Utestående"
     assert hass.states.get("button.leietaker_send_lenke").name == "Leietaker Send lenke"
@@ -199,3 +200,25 @@ async def test_knappen_merk_som_betalt_oppdaterer_utestaaende(
         "button", "press", {"entity_id": "button.leietaker_merk_som_betalt"}, blocking=True
     )
     assert hass.states.get("sensor.leietaker_utestaende").state == "0.0"
+
+
+async def test_knappen_send_regnskap_sender_kopi_til_utleier(hass, hass_storage, tmp_path, freezer):
+    from unittest.mock import patch as _patch
+
+    with _patch("custom_components.stromregnskap_leietaker.epost.send_epost") as epost:
+        await _sett_opp(hass, tmp_path, freezer)
+        await hass.services.async_call(
+            "button", "press", {"entity_id": "button.leietaker_send_regnskap"}, blocking=True
+        )
+        assert epost.call_count == 1
+        assert "ola@example.com" in epost.call_args.kwargs["melding"]["To"]
+
+
+async def test_lenkesensoren_har_lenker_til_pdf_ene_som_attributter(
+    hass, hass_storage, tmp_path, freezer
+):
+    await _sett_opp(hass, tmp_path, freezer)
+    a = hass.states.get("sensor.leietaker_lenke").attributes
+    base = "https://eksempel.ui.nabu.casa/stromregnskap/testslug123"
+    assert a["regnskap_pdf"] == f"{base}/regnskap-strom-leilighet.pdf"
+    assert a["siste_faktura_pdf"] == f"{base}/fakturagrunnlag-strom-leilighet-2026-10.pdf"

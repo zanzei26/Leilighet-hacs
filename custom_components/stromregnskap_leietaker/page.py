@@ -11,6 +11,7 @@ from html import escape
 from typing import Any
 
 from .calc import STATUS_BETALT, STATUS_VENTER, avrund, utestaaende
+from .filnavn import REGNSKAPSNAVN, fakturanavn
 
 MAANEDER = (
     "januar", "februar", "mars", "april", "mai", "juni",
@@ -25,6 +26,11 @@ def fmt_tall(verdi: float | int, desimaler: int = 2) -> str:
     v = avrund(verdi, desimaler)
     tekst = f"{abs(v):,.{desimaler}f}".replace(",", NBSP).replace(".", ",")
     return f"-{tekst}" if v < 0 else tekst
+
+
+def fmt_kwh(verdi: float | int) -> str:
+    """kWh med én desimal (halvt opp). Tilstrekkelig, og lett å kontrollere for hånd."""
+    return fmt_tall(verdi, 1)
 
 
 def fmt_dato(iso: str) -> str:
@@ -93,13 +99,20 @@ th:first-child, td:first-child { text-align:left; }
 tfoot td { font-weight:700; border-bottom:0; }
 .rull { overflow-x:auto; }
 summary { cursor:pointer; font-weight:600; }
+.knapp { display:inline-block; margin-top:4px; padding:4px 10px; border:1px solid var(--linje); border-radius:8px;
+  text-decoration:none; color:var(--tekst); font-weight:600; font-size:.85rem; }
+.knapp:hover { background:var(--bg); }
+.nb { white-space:nowrap; }
+@media (max-width: 360px) { main { padding:10px; } .kort { padding:12px; }
+  table { font-size:.8rem; } th, td { padding:6px 2px; } .knapp { padding:3px 7px; } }
+.knapp.stor { padding:8px 14px; font-size:.95rem; }
 """
 
 
 def _hittil(ctx: dict[str, Any]) -> str:
     h = ctx.get("hittil")
     if h and h.get("kwh") is not None:
-        kwh = f"{fmt_tall(h['kwh'], 2)} kWh"
+        kwh = f"{fmt_kwh(h['kwh'])} kWh"
     else:
         kwh = "–"
     snitt = f"{fmt_tall(h['snitt'], 4)} kr/kWh" if h and h.get("snitt") is not None else "–"
@@ -127,36 +140,53 @@ def _hittil(ctx: dict[str, Any]) -> str:
 </section>"""
 
 
-def _historikk(synlige: list[dict[str, Any]], ubetalt_sum: float) -> str:
+def _historikk(synlige: list[dict[str, Any]], ubetalt_sum: float, pdf_base: str | None) -> str:
     if not synlige:
         return """
 <section class="kort">
   <h2>Historikk</h2>
   <p>Ingen oppgjør ennå.</p>
 </section>"""
+
+    def periodecelle(p: dict[str, Any]) -> str:
+        tekst = _e(periode_tekst(p))
+        if not pdf_base:
+            return tekst
+        href = _e(f"{pdf_base}/{fakturanavn(p['id'])}")
+        # lenken ligger under periodenavnet, så den alltid er synlig, også på smale skjermer
+        return (
+            f'{tekst}<br><a class="knapp" href="{href}" '
+            f'aria-label="Last ned fakturagrunnlag for {_e(maaned_tekst(p["id"]))} som PDF">'
+            "Last ned PDF</a>"
+        )
+
     rader = "\n".join(
         f"""      <tr>
-        <td>{_e(periode_tekst(p))}</td>
-        <td>{fmt_tall(p["leilighet_kwh"], 1)}</td>
-        <td>{fmt_tall(p["snitt"], 4)}</td>
+        <td>{periodecelle(p)}</td>
+        <td><span class="nb">{fmt_kwh(p["leilighet_kwh"])} kWh</span><br><span class="liten">× {fmt_tall(p["snitt"], 4)} kr/kWh</span></td>
         <td>{fmt_tall(p["belop"], 2)}</td>
-        <td>{fmt_dato(p["forfall"])}</td>
-        <td>{_status_tekst(p["status"])}</td>
+        <td><span class="nb">{_status_tekst(p["status"])}</span><br><span class="liten">forfall {fmt_dato(p["forfall"])}</span></td>
       </tr>"""
         for p in synlige
     )
+    regnskap = ""
+    if pdf_base:
+        href = _e(f"{pdf_base}/{REGNSKAPSNAVN}")
+        regnskap = (
+            f'\n  <p><a class="knapp stor" href="{href}">Last ned hele regnskapet (PDF)</a></p>'
+        )
     return f"""
 <section class="kort">
   <h2>Historikk</h2>
   <div class="rull">
   <table>
-    <thead><tr><th>Periode</th><th>kWh</th><th>kr/kWh</th><th>Beløp (kr)</th><th>Forfall</th><th>Status</th></tr></thead>
+    <thead><tr><th>Periode</th><th>Forbruk og pris</th><th>Beløp (kr)</th><th>Status</th></tr></thead>
     <tbody>
 {rader}
     </tbody>
-    <tfoot><tr><td colspan="3">Totalt utestående</td><td>{fmt_tall(ubetalt_sum, 2)}</td><td></td><td></td></tr></tfoot>
+    <tfoot><tr><td colspan="2">Totalt utestående</td><td>{fmt_tall(ubetalt_sum, 2)}</td><td></td></tr></tfoot>
   </table>
-  </div>
+  </div>{regnskap}
 </section>"""
 
 
@@ -210,6 +240,7 @@ def render_side(ctx: dict[str, Any]) -> str:
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
+<meta http-equiv="refresh" content="60">
 <title>Strømregnskap · {_e(lt["adresse"])}</title>
 <style>{CSS}</style>
 </head>
@@ -235,7 +266,7 @@ Leieforhold fra {innflyttet}</p>
   </dl>
 </section>
 {_hittil(ctx)}
-{_historikk(synlige, ubetalt)}
+{_historikk(synlige, ubetalt, ctx.get("pdf_base"))}
 {_utregning(siste)}
 <p class="liten">Generert av Home Assistant {_tidspunkt(ctx["oppdatert"])}</p>
 </main>

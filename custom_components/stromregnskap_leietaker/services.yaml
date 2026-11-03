@@ -92,3 +92,11 @@ sett_malerstand:
           step: 0.001
           mode: box
           unit_of_measurement: kWh
+
+send_regnskap:
+  fields:
+    periode:
+      required: false
+      example: "2026-10"
+      selector:
+        text:

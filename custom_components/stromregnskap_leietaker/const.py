@@ -27,6 +27,7 @@ CONF_SMTP_PORT = "smtp_port"
 CONF_SMTP_BRUKER = "smtp_bruker"
 CONF_SMTP_PASSORD = "smtp_passord"
 CONF_CC_UTLEIER = "cc_utleier"
+CONF_KOPI_TIL_UTLEIER = "kopi_til_utleier"
 CONF_SEND_TEST = "send_test"
 
 CONF_SLUG = "slug"

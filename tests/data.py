@@ -111,6 +111,7 @@ CFG = {
     "siste_sjekkdag": 6,
     "importer_historikk": False,
     "maaler_start_stand": 0.0,
+    "kopi_til_utleier": False,
 }
 
 # SYNTETISKE testtall for november (ikke ekte data).

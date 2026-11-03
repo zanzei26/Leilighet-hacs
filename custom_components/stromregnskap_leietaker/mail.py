@@ -13,7 +13,7 @@ from email.message import EmailMessage
 from html import escape
 from typing import Any
 
-from .page import fmt_dato, fmt_tall, maaned_tekst
+from .page import fmt_dato, fmt_kwh, fmt_tall, maaned_tekst
 
 SMTP_TIMEOUT = 30
 
@@ -51,7 +51,7 @@ def bygg_epost(
     """Bygger månedsoppgjøret som flerdelt e-post (ren tekst + HTML)."""
     maaned = maaned_tekst(periode["id"])
     fornavn = _fornavn(leietaker["navn"])
-    kwh = f"{fmt_tall(periode['leilighet_kwh'], 1)} kWh"
+    kwh = f"{fmt_kwh(periode['leilighet_kwh'])} kWh"
     snitt = f"{fmt_tall(periode['snitt'], 4)} kr/kWh"
     belop = f"{fmt_tall(periode['belop'], 2)} kr"
     forfall = fmt_dato(periode["forfall"])
@@ -163,6 +163,46 @@ Hilsen
         msg["Cc"] = _adresse(utleier["navn"], utleier["epost"])
     msg.set_content(tekst)
     msg.add_alternative(html, subtype="html")
+    return msg
+
+
+def bygg_kopipost(
+    *,
+    periode: dict[str, Any],
+    leietaker: dict[str, Any],
+    utleier: dict[str, Any],
+    vedlegg: list[tuple[str, str, bytes]],
+) -> EmailMessage:
+    """Kopi til utleier etter et oppgjør, med vedlegg som (filnavn, mimetype, innhold).
+
+    Er ment som en kopi utenfor Home Assistant: fakturagrunnlag, hele regnskapet og en
+    JSON-sikkerhetskopi av alle data.
+    """
+    maaned = maaned_tekst(periode["id"])
+    liste = "\n".join(f"- {navn}" for navn, _, _ in vedlegg)
+    tekst = f"""Hei {_fornavn(utleier["navn"])},
+
+Dette er en kopi til deg som utleier. Oppgjøret for {maaned} er laget og sendt til \
+{leietaker["navn"]} ({leietaker["epost"]}).
+
+Beløp: {fmt_tall(periode["belop"], 2)} kr
+Forbruk: {fmt_kwh(periode["leilighet_kwh"])} kWh × {fmt_tall(periode["snitt"], 4)} kr/kWh
+Forfall: {fmt_dato(periode["forfall"])}
+
+Vedlagt:
+{liste}
+
+Sikkerhetskopien (JSON) inneholder alle perioder, målerstander og øyeblikksbilder.
+Ta vare på denne e-posten. Den er en kopi som ligger utenfor Home Assistant.
+"""
+    msg = EmailMessage()
+    msg["Subject"] = f"Fakturagrunnlag strøm leilighet – {maaned}"
+    msg["From"] = _adresse(utleier["navn"], utleier["epost"])
+    msg["To"] = _adresse(utleier["navn"], utleier["epost"])
+    msg.set_content(tekst)
+    for navn, mimetype, innhold in vedlegg:
+        hovedtype, _, undertype = mimetype.partition("/")
+        msg.add_attachment(innhold, maintype=hovedtype, subtype=undertype, filename=navn)
     return msg
 
 

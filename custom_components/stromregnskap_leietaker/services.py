@@ -84,6 +84,10 @@ async def _sett_malerstand(call: ServiceCall) -> None:
     await _koordinator(call.hass).async_sett_malerstand(call.data["dato"], call.data["stand"])
 
 
+async def _send_regnskap(call: ServiceCall) -> None:
+    await _koordinator(call.hass).async_send_kopi(call.data.get("periode"))
+
+
 async def _send_lenke(call: ServiceCall) -> None:
     await _koordinator(call.hass).async_send_lenke()
 
@@ -113,3 +117,4 @@ def async_registrer_tjenester(hass: HomeAssistant) -> None:
     reg(DOMAIN, "send_lenke", _send_lenke, SKJEMA_TOM)
     reg(DOMAIN, "merk_betalt", _merk_betalt, SKJEMA_VALGFRI_PERIODE)
     reg(DOMAIN, "sett_malerstand", _sett_malerstand, SKJEMA_MALERSTAND)
+    reg(DOMAIN, "send_regnskap", _send_regnskap, SKJEMA_VALGFRI_PERIODE)

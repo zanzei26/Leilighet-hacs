@@ -14,6 +14,7 @@ from homeassistant.util import dt as dt_util
 from .calc import STATUS_VENTER
 from .const import (
     CONF_CC_UTLEIER,
+    CONF_KOPI_TIL_UTLEIER,
     CONF_PUBLISER_SIDE,
     CONF_SMTP_BRUKER,
     CONF_SMTP_HOST,
@@ -21,8 +22,9 @@ from .const import (
     CONF_SMTP_PORT,
     EPOST_MAKS_TIMER,
 )
+from .filnavn import REGNSKAPSNAVN, fakturanavn
 from .generering import sammendrag
-from .mail import SmtpFeil, bygg_epost, bygg_lenkepost, send_epost
+from .mail import SmtpFeil, bygg_epost, bygg_kopipost, bygg_lenkepost, send_epost
 from .varsler import ISSUE_EPOST
 
 _LOGGER = logging.getLogger(__name__)
@@ -72,6 +74,54 @@ class EpostMixin:
             "Lenke sendt", f"Lenken til leietakersiden er sendt til {self.leietaker['epost']}."
         )
 
+    async def async_send_kopi(self, periode_id: str | None = None) -> None:
+        """Sender kopi til utleier: fakturagrunnlag, hele regnskapet og JSON-sikkerhetskopi."""
+        naa = dt_util.now()
+        if periode_id is None:
+            synlige = self.synlige_perioder()
+            if not synlige:
+                raise ServiceValidationError("Det finnes ingen oppgjør å sende kopi av ennå.")
+            periode_id = max(synlige, key=lambda p: p["id"])["id"]
+        p = self._hent_periode(periode_id)
+        if p["status"] == STATUS_VENTER:
+            raise ServiceValidationError(
+                f"Perioden {periode_id} venter på godkjenning og kan ikke sendes ennå."
+            )
+        faktura = await self.async_faktura_pdf(periode_id, naa)
+        regnskap = await self.async_regnskap_pdf(naa)
+        melding = bygg_kopipost(
+            periode=p,
+            leietaker=self.leietaker,
+            utleier=self.utleier,
+            vedlegg=[
+                (fakturanavn(periode_id), "application/pdf", faktura),
+                (REGNSKAPSNAVN, "application/pdf", regnskap),
+                (
+                    f"stromregnskap-sikkerhetskopi-{naa:%Y%m%d}.json",
+                    "application/json",
+                    self.sikkerhetsjson(naa),
+                ),
+            ],
+        )
+        try:
+            await self._send_melding(melding)
+        except SmtpFeil as err:
+            _LOGGER.warning("Kopien for %s kunne ikke sendes (%s): %s", periode_id, err.kind, err)
+            raise HomeAssistantError(f"Kopien kunne ikke sendes ({err.kind}): {err}") from err
+
+    async def _send_kopi_stille(self, p: dict[str, Any]) -> None:
+        """Automatisk kopi etter utsending til leietaker. Feil her stopper aldri oppgjøret."""
+        if not self.cfg.get(CONF_KOPI_TIL_UTLEIER, True):
+            return
+        try:
+            await self.async_send_kopi(p["id"])
+        except HomeAssistantError as err:
+            await self.varsler.varsle_en_gang(
+                f"kopi_feilet:{p['id']}",
+                "Kopi til utleier feilet",
+                f"Kopien av oppgjøret for {p['id']} kunne ikke sendes til deg: {err}",
+            )
+
     async def _send_epost(self, p: dict[str, Any], naa: datetime) -> SmtpFeil | None:
         """Sender oppgjøret. Returnerer None ved suksess, ellers feilen."""
         c = self.cfg
@@ -103,6 +153,7 @@ class EpostMixin:
         await self.lager.async_lagre()
         self.varsler.fjern_issue(ISSUE_EPOST, p["id"])
         await self.varsler.varsle("Strømoppgjør sendt", f"Oppgjør {p['id']} sendt: {sammendrag(p)}")
+        await self._send_kopi_stille(p)
         return None
 
     async def _send_ventende(self, naa: datetime) -> None:

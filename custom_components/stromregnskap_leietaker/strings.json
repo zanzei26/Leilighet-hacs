@@ -56,7 +56,8 @@
           "smtp_bruker": "Username",
           "smtp_passord": "App password",
           "cc_utleier": "Send a copy to the landlord",
-          "send_test": "Send a test email to the landlord now"
+          "send_test": "Send a test email to the landlord now",
+          "kopi_til_utleier": "Send a copy with PDFs and a backup to the landlord after each settlement"
         },
         "data_description": {
           "smtp_host": "The address of the mail server. For Gmail: smtp.gmail.com.",
@@ -64,7 +65,8 @@
           "smtp_bruker": "The username of the email account, usually the full address. Suggested from the landlord's email.",
           "smtp_passord": "The 16-character app password from Google, not your regular Google password. Spaces in the password do not matter.",
           "cc_utleier": "Sends a copy of each settlement to the landlord's address, so you see exactly what the tenant receives.",
-          "send_test": "Sends a test email to the landlord's address when you continue, to show that the login works. Nothing is sent to the tenant now."
+          "send_test": "Sends a test email to the landlord's address when you continue, to show that the login works. Nothing is sent to the tenant now.",
+          "kopi_til_utleier": "After the settlement has been sent to the tenant, the landlord gets an email with the subject “Fakturagrunnlag strøm leilighet”. Attached are the invoice basis and the full accounts as PDF, and a backup of all data (JSON). It gives a copy outside Home Assistant."
         }
       },
       "side": {
@@ -206,7 +208,8 @@
           "smtp_bruker": "Username",
           "smtp_passord": "App password",
           "cc_utleier": "Send a copy to the landlord",
-          "send_test": "Send a test email to the landlord now"
+          "send_test": "Send a test email to the landlord now",
+          "kopi_til_utleier": "Send a copy with PDFs and a backup to the landlord after each settlement"
         },
         "data_description": {
           "smtp_host": "The address of the mail server. For Gmail: smtp.gmail.com.",
@@ -214,7 +217,8 @@
           "smtp_bruker": "The username of the email account, usually the full address. Suggested from the landlord's email.",
           "smtp_passord": "Leave empty to keep the current app password. Fill in only if you have created a new one.",
           "cc_utleier": "Sends a copy of each settlement to the landlord's address, so you see exactly what the tenant receives.",
-          "send_test": "Sends a test email to the landlord's address when you continue, to show that the login works. Nothing is sent to the tenant now."
+          "send_test": "Sends a test email to the landlord's address when you continue, to show that the login works. Nothing is sent to the tenant now.",
+          "kopi_til_utleier": "After the settlement has been sent to the tenant, the landlord gets an email with the subject “Fakturagrunnlag strøm leilighet”. Attached are the invoice basis and the full accounts as PDF, and a backup of all data (JSON). It gives a copy outside Home Assistant."
         }
       },
       "side": {
@@ -414,6 +418,16 @@
         "stand": {
           "name": "Meter reading (kWh)",
           "description": "What the meter showed at the month change."
+        }
+      }
+    },
+    "send_regnskap": {
+      "name": "Send accounts to me",
+      "description": "Sends an email to you as landlord with the invoice basis for a period, the full accounts (PDF) and a JSON backup as attachments. Without a period the latest settlement is used.",
+      "fields": {
+        "periode": {
+          "name": "Period",
+          "description": "The month as YYYY-MM. Leave empty for the latest settlement."
         }
       }
     }
