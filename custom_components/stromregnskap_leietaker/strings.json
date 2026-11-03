@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Tenant and landlord",
-        "description": "Details about the tenant, the landlord and the payment.",
+        "description": "Tell us who the tenant and the landlord are and how payment is made. The details are used in the email to the tenant and on the tenant page. Everything can be changed later under Configure.",
         "data": {
           "leietaker_navn": "Tenant name",
           "leietaker_epost": "Tenant email",
@@ -13,11 +13,21 @@
           "utleier_epost": "Landlord email",
           "kontonummer": "Bank account number",
           "forfallsdag": "Due day of the month (1–28)"
+        },
+        "data_description": {
+          "leietaker_navn": "Shown on the tenant page. The first name is used in the greeting of the email.",
+          "leietaker_epost": "The monthly settlement is sent here. Try your own address first and change it later under Configure.",
+          "adresse": "Shown on the page. The street address (the part before the first comma) is used in the email subject.",
+          "innflyttet": "The date the tenancy started. Shown on the tenant page.",
+          "utleier_navn": "The name shown as the sender of the email and as the landlord on the page.",
+          "utleier_epost": "The sender address of the email, and where the test email goes. A copy of each settlement can also be sent here.",
+          "kontonummer": "Shown on the page and in the email as the account the tenant pays to.",
+          "forfallsdag": "The day of the month after the period when the amount is due (1–28). From that day the settlement is automatically marked as paid."
         }
       },
       "kilder": {
         "title": "Data sources",
-        "description": "The sensors the integration reads from. The defaults match the existing setup.",
+        "description": "The integration does not calculate the house's electricity price itself. It reads ready-made figures from sensors you already have, and you choose which ones here.\n\n**Must be correct for settlements to be created:** the electricity accounts and the notification service. The apartment's usage is used for checking and for the “so far” figures.\n\n**Display and estimate only:** raw meter, power and forecast. The form requires a sensor for all of them, but these three do not affect the settlement itself.\n\nThe defaults match the original setup.",
         "data": {
           "ent_regnskap": "Electricity accounts (house monthly figures)",
           "ent_utility": "Apartment usage this month (utility_meter)",
@@ -25,11 +35,19 @@
           "ent_effekt": "Instantaneous power (W)",
           "ent_prognose": "Usage forecast",
           "varsel_tjeneste": "Notification service for the landlord (notify.name)"
+        },
+        "data_description": {
+          "ent_regnskap": "The sensor with the house's electricity figures per month. It needs the attribute “maneder” (a list of closed months, each with mnd, kwh, kraft, nettleie, norgespris, sum and snitt, and preferably leilighet_kwh) and “denne_maneden” (the same fields for the current month). The house's average price is taken only from here.",
+          "ent_utility": "The apartment's usage so far this month in kWh, from a meter that resets every month (a utility_meter with a monthly cycle). The attribute “last_period” (last month's final value) is used to check the kWh in the settlement.",
+          "ent_import": "The apartment's raw, accumulated meter reading in kWh. Used for display only (as the attribute maaler_total_kwh) and does not affect the settlement.",
+          "ent_effekt": "The apartment's instantaneous power in W. Used for display only (as the attribute effekt_w) and does not affect the settlement.",
+          "ent_prognose": "The sensor that says how much usage is expected to change compared with last month, in percent. It needs the attribute “endring_prosent”. Used only for the monthly estimate (last month's kWh × (1 + percent/100)). Without it no estimate is shown.",
+          "varsel_tjeneste": "Where notifications to you as landlord are sent, for example when a settlement awaits approval or an email fails. Write the service as notify.name. You can find the names under Developer tools → Actions by searching for “notify”. The service must exist before you can continue."
         }
       },
       "epost": {
         "title": "Email (SMTP)",
-        "description": "The settlement is sent from Home Assistant over SMTP. For Gmail use smtp.gmail.com, port 587 and an app password. The password is stored unencrypted in the configuration.",
+        "description": "The settlement is sent from Home Assistant through the email account you provide. For Gmail: server smtp.gmail.com, port 587, your Gmail username and an **app password** (not your regular password). You create an app password at https://myaccount.google.com/apppasswords and it requires 2-step verification. The password is stored unencrypted in Home Assistant's configuration, so create a dedicated one.",
         "data": {
           "smtp_host": "SMTP server",
           "smtp_port": "Port",
@@ -37,18 +55,29 @@
           "smtp_passord": "App password",
           "cc_utleier": "Send a copy to the landlord",
           "send_test": "Send a test email to the landlord now"
+        },
+        "data_description": {
+          "smtp_host": "The address of the mail server. For Gmail: smtp.gmail.com.",
+          "smtp_port": "Port for the encrypted connection (STARTTLS). For Gmail: 587.",
+          "smtp_bruker": "The username of the email account, usually the full address. Suggested from the landlord's email.",
+          "smtp_passord": "The 16-character app password from Google, not your regular Google password. Spaces in the password do not matter.",
+          "cc_utleier": "Sends a copy of each settlement to the landlord's address, so you see exactly what the tenant receives.",
+          "send_test": "Sends a test email to the landlord's address when you continue, to show that the login works. Nothing is sent to the tenant now."
         }
       },
       "side": {
         "title": "Tenant page",
-        "description": "The tenant gets a permanent link to a page with the outstanding amount, usage so far this month and history. The link contains a secret random part and needs no login.\n\nLink: {lenke}",
+        "description": "The tenant gets a permanent link to an ordinary web page showing the outstanding amount, usage so far this month and history. The page needs no login, and the link has a secret random part so it cannot be guessed. It is the same link as in the email. If Nabu Casa is on, that address is used, otherwise the external URL.\n\nLink: {lenke}",
         "data": {
           "publiser_side": "Publish the tenant page"
+        },
+        "data_description": {
+          "publiser_side": "If you turn this off no page is created and the link stops working. Emails are then sent without a link."
         }
       },
       "grenser": {
         "title": "Sanity checks and run time",
-        "description": "If the settlement passes the checks it is sent automatically. Otherwise you get a notification and it waits for your approval.",
+        "description": "The settlement is created automatically once a month and checked before it is sent. If it breaks one of the rules below no email is sent: you get a notification and must approve the settlement yourself (or fix the data first).",
         "data": {
           "snitt_min": "Lowest average price (NOK/kWh)",
           "snitt_maks": "Highest average price (NOK/kWh)",
@@ -56,6 +85,14 @@
           "kjoredag": "First run day of the month",
           "kjoretid": "Time of day",
           "siste_sjekkdag": "Last day to keep checking"
+        },
+        "data_description": {
+          "snitt_min": "A house average price lower than this is treated as an error (NOK/kWh).",
+          "snitt_maks": "A house average price higher than this is treated as an error (NOK/kWh).",
+          "endring_maks_prosent": "How much the apartment's kWh may differ from the previous period, up or down, before you must approve the settlement yourself. 60 means ±60 %.",
+          "kjoredag": "The day of the month (1–28) when the integration starts creating the settlement for the previous month.",
+          "kjoretid": "The time of day on the run day when it starts trying. Also used as the time of the warning if data is missing.",
+          "siste_sjekkdag": "The last day it keeps trying if the data is not ready. After that you must run “Generate settlement” yourself. Cannot be before the run day."
         }
       },
       "importer": {
@@ -63,16 +100,25 @@
         "description": "Import the periods that have already been invoiced so history and outstanding amounts are correct from the start:\n\n{historikk}",
         "data": {
           "importer_historikk": "Import existing history"
+        },
+        "data_description": {
+          "importer_historikk": "Recommended. Without the import the previous month does not exist, and the integration then creates and sends a settlement for it to the tenant as soon as it is set up, if that is between the run day and the last check day."
         }
       },
       "reconfigure": {
         "title": "New tenant",
-        "description": "Enter the details of the new tenant.",
+        "description": "Enter the details of the new tenant. The previous tenant's history has been archived and the link replaced.",
         "data": {
           "leietaker_navn": "Tenant name",
           "leietaker_epost": "Tenant email",
           "adresse": "Address",
           "innflyttet": "Move-in date"
+        },
+        "data_description": {
+          "leietaker_navn": "Shown on the tenant page. The first name is used in the greeting of the email.",
+          "leietaker_epost": "The monthly settlement is sent here. Try your own address first and change it later under Configure.",
+          "adresse": "Shown on the page. The street address (the part before the first comma) is used in the email subject.",
+          "innflyttet": "The date the tenancy started. Shown on the tenant page."
         }
       }
     },
@@ -114,7 +160,18 @@
           "utleier_epost": "Landlord email",
           "kontonummer": "Bank account number",
           "forfallsdag": "Due day of the month (1–28)"
-        }
+        },
+        "data_description": {
+          "leietaker_navn": "Shown on the tenant page. The first name is used in the greeting of the email.",
+          "leietaker_epost": "The monthly settlement is sent here. Try your own address first and change it later under Configure.",
+          "adresse": "Shown on the page. The street address (the part before the first comma) is used in the email subject.",
+          "innflyttet": "The date the tenancy started. Shown on the tenant page.",
+          "utleier_navn": "The name shown as the sender of the email and as the landlord on the page.",
+          "utleier_epost": "The sender address of the email, and where the test email goes. A copy of each settlement can also be sent here.",
+          "kontonummer": "Shown on the page and in the email as the account the tenant pays to.",
+          "forfallsdag": "The day of the month after the period when the amount is due (1–28). From that day the settlement is automatically marked as paid."
+        },
+        "description": "Tell us who the tenant and the landlord are and how payment is made. The details are used in the email to the tenant and on the tenant page. Everything can be changed later under Configure."
       },
       "kilder": {
         "title": "Data sources and notifications",
@@ -125,7 +182,16 @@
           "ent_effekt": "Instantaneous power (W)",
           "ent_prognose": "Usage forecast",
           "varsel_tjeneste": "Notification service for the landlord (notify.name)"
-        }
+        },
+        "data_description": {
+          "ent_regnskap": "The sensor with the house's electricity figures per month. It needs the attribute “maneder” (a list of closed months, each with mnd, kwh, kraft, nettleie, norgespris, sum and snitt, and preferably leilighet_kwh) and “denne_maneden” (the same fields for the current month). The house's average price is taken only from here.",
+          "ent_utility": "The apartment's usage so far this month in kWh, from a meter that resets every month (a utility_meter with a monthly cycle). The attribute “last_period” (last month's final value) is used to check the kWh in the settlement.",
+          "ent_import": "The apartment's raw, accumulated meter reading in kWh. Used for display only (as the attribute maaler_total_kwh) and does not affect the settlement.",
+          "ent_effekt": "The apartment's instantaneous power in W. Used for display only (as the attribute effekt_w) and does not affect the settlement.",
+          "ent_prognose": "The sensor that says how much usage is expected to change compared with last month, in percent. It needs the attribute “endring_prosent”. Used only for the monthly estimate (last month's kWh × (1 + percent/100)). Without it no estimate is shown.",
+          "varsel_tjeneste": "Where notifications to you as landlord are sent, for example when a settlement awaits approval or an email fails. Write the service as notify.name. You can find the names under Developer tools → Actions by searching for “notify”. The service must exist before you can continue."
+        },
+        "description": "The integration does not calculate the house's electricity price itself. It reads ready-made figures from sensors you already have, and you choose which ones here.\n\n**Must be correct for settlements to be created:** the electricity accounts and the notification service. The apartment's usage is used for checking and for the “so far” figures.\n\n**Display and estimate only:** raw meter, power and forecast. The form requires a sensor for all of them, but these three do not affect the settlement itself.\n\nThe defaults match the original setup."
       },
       "epost": {
         "title": "Email (SMTP)",
@@ -137,13 +203,24 @@
           "smtp_passord": "App password",
           "cc_utleier": "Send a copy to the landlord",
           "send_test": "Send a test email to the landlord now"
+        },
+        "data_description": {
+          "smtp_host": "The address of the mail server. For Gmail: smtp.gmail.com.",
+          "smtp_port": "Port for the encrypted connection (STARTTLS). For Gmail: 587.",
+          "smtp_bruker": "The username of the email account, usually the full address. Suggested from the landlord's email.",
+          "smtp_passord": "Leave empty to keep the current app password. Fill in only if you have created a new one.",
+          "cc_utleier": "Sends a copy of each settlement to the landlord's address, so you see exactly what the tenant receives.",
+          "send_test": "Sends a test email to the landlord's address when you continue, to show that the login works. Nothing is sent to the tenant now."
         }
       },
       "side": {
         "title": "Tenant page",
-        "description": "The tenant gets a permanent link to a page with the outstanding amount, usage so far this month and history. The link contains a secret random part and needs no login.\n\nLink: {lenke}",
+        "description": "The tenant gets a permanent link to an ordinary web page showing the outstanding amount, usage so far this month and history. The page needs no login, and the link has a secret random part so it cannot be guessed. It is the same link as in the email. If Nabu Casa is on, that address is used, otherwise the external URL.\n\nLink: {lenke}",
         "data": {
           "publiser_side": "Publish the tenant page"
+        },
+        "data_description": {
+          "publiser_side": "If you turn this off no page is created and the link stops working. Emails are then sent without a link."
         }
       },
       "grenser": {
@@ -155,7 +232,16 @@
           "kjoredag": "First run day of the month",
           "kjoretid": "Time of day",
           "siste_sjekkdag": "Last day to keep checking"
-        }
+        },
+        "data_description": {
+          "snitt_min": "A house average price lower than this is treated as an error (NOK/kWh).",
+          "snitt_maks": "A house average price higher than this is treated as an error (NOK/kWh).",
+          "endring_maks_prosent": "How much the apartment's kWh may differ from the previous period, up or down, before you must approve the settlement yourself. 60 means ±60 %.",
+          "kjoredag": "The day of the month (1–28) when the integration starts creating the settlement for the previous month.",
+          "kjoretid": "The time of day on the run day when it starts trying. Also used as the time of the warning if data is missing.",
+          "siste_sjekkdag": "The last day it keeps trying if the data is not ready. After that you must run “Generate settlement” yourself. Cannot be before the run day."
+        },
+        "description": "The settlement is created automatically once a month and checked before it is sent. If it breaks one of the rules below no email is sent: you get a notification and must approve the settlement yourself (or fix the data first)."
       }
     },
     "error": {
@@ -279,6 +365,20 @@
     "ny_leietaker": {
       "name": "New tenant",
       "description": "Archives and clears the history, replaces the tenant link and opens reconfiguration for the new tenant's details."
+    },
+    "send_lenke": {
+      "name": "Send link to tenant",
+      "description": "Sends a short email to the tenant with the link to the tenant page. Use it the first time the tenant should get the link, or if it has been lost."
+    },
+    "merk_betalt": {
+      "name": "Mark as paid",
+      "description": "Marks outstanding settlements as paid. Without a period all outstanding ones are marked (including those with “exception”). Settlements awaiting approval are left alone.",
+      "fields": {
+        "periode": {
+          "name": "Period",
+          "description": "The month as YYYY-MM. Leave empty to mark everything outstanding as paid."
+        }
+      }
     }
   }
 }

@@ -25,10 +25,11 @@ KRONER = "NOK"
 
 
 def device_info(entry_id: str) -> DeviceInfo:
+    """Én enhet for alle entiteter. Enhetsnavnet står først i entitetenes navn."""
     return DeviceInfo(
         identifiers={(DOMAIN, entry_id)},
-        name="Strømregnskap leietaker",
-        manufacturer="Strømregnskap leietaker",
+        name="Leietaker",
+        model="Strømregnskap leietaker",
     )
 
 
@@ -51,7 +52,7 @@ def _siste_attributter(d: dict[str, Any]) -> dict[str, Any]:
 SENSORER: tuple[StromSensorBeskrivelse, ...] = (
     StromSensorBeskrivelse(
         key="utestaaende",
-        name="Leietaker utestående",
+        name="Utestående",
         device_class=SensorDeviceClass.MONETARY,
         native_unit_of_measurement=KRONER,
         suggested_display_precision=2,
@@ -63,7 +64,7 @@ SENSORER: tuple[StromSensorBeskrivelse, ...] = (
     ),
     StromSensorBeskrivelse(
         key="siste_oppgjor",
-        name="Leietaker siste oppgjør",
+        name="Siste oppgjør",
         device_class=SensorDeviceClass.MONETARY,
         native_unit_of_measurement=KRONER,
         suggested_display_precision=2,
@@ -72,7 +73,7 @@ SENSORER: tuple[StromSensorBeskrivelse, ...] = (
     ),
     StromSensorBeskrivelse(
         key="forbruk_hittil",
-        name="Leietaker forbruk hittil",
+        name="Forbruk hittil",
         device_class=SensorDeviceClass.ENERGY,
         state_class=SensorStateClass.TOTAL_INCREASING,
         native_unit_of_measurement=UnitOfEnergy.KILO_WATT_HOUR,
@@ -90,7 +91,7 @@ SENSORER: tuple[StromSensorBeskrivelse, ...] = (
     ),
     StromSensorBeskrivelse(
         key="kostnad_hittil",
-        name="Leietaker kostnad hittil",
+        name="Kostnad hittil",
         device_class=SensorDeviceClass.MONETARY,
         native_unit_of_measurement=KRONER,
         suggested_display_precision=2,
@@ -98,7 +99,7 @@ SENSORER: tuple[StromSensorBeskrivelse, ...] = (
     ),
     StromSensorBeskrivelse(
         key="estimat_maned",
-        name="Leietaker estimat måned",
+        name="Estimat måned",
         device_class=SensorDeviceClass.MONETARY,
         native_unit_of_measurement=KRONER,
         suggested_display_precision=0,
@@ -107,10 +108,16 @@ SENSORER: tuple[StromSensorBeskrivelse, ...] = (
     ),
     StromSensorBeskrivelse(
         key="side_sist_publisert",
-        name="Leietaker side sist publisert",
+        name="Side sist publisert",
         device_class=SensorDeviceClass.TIMESTAMP,
         verdi=lambda d: d["side_sist_publisert"],
         attributter=lambda d: {"side_url": d["side_url"]},
+    ),
+    StromSensorBeskrivelse(
+        key="lenke",
+        name="Lenke",
+        icon="mdi:link-variant",
+        verdi=lambda d: d["side_url"],
     ),
 )
 
@@ -126,7 +133,7 @@ class StromSensor(CoordinatorEntity[StromregnskapCoordinator], SensorEntity):
     """En sensor som leser fra koordinatorens data."""
 
     entity_description: StromSensorBeskrivelse
-    _attr_has_entity_name = False
+    _attr_has_entity_name = True
 
     def __init__(
         self,

@@ -107,7 +107,12 @@ class StromregnskapCoordinator(
 
     @property
     def side_url(self) -> str | None:
-        """Leietakers faste lenke: Nabu Casa først, ellers ekstern/intern URL."""
+        """Leietakers faste lenke (Nabu Casa først, ellers ekstern/intern URL).
+
+        None hvis siden ikke publiseres eller HA ikke kjenner noen adresse.
+        """
+        if not self.cfg.get(CONF_PUBLISER_SIDE):
+            return None
         return bygg_side_url(self.hass, self.cfg[CONF_SLUG])
 
     @property

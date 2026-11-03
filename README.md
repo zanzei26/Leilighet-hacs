@@ -59,6 +59,8 @@ Siden leveres av en egen rute på nøyaktig denne URL-en, og ikke av Home Assist
 
 ## Entiteter
 
+Alle entitetene ligger på én enhet, «Leietaker».
+
 | Entitet | Innhold |
 |---|---|
 | `sensor.leietaker_utestaende` | Sum ubetalt (kr). Attributter: antall perioder, lenke. |
@@ -67,9 +69,14 @@ Siden leveres av en egen rute på nøyaktig denne URL-en, og ikke av Home Assist
 | `sensor.leietaker_kostnad_hittil` | Kostnad hittil (kr). |
 | `sensor.leietaker_estimat_maned` | Månedsestimat (kr). Attributt: kWh. |
 | `sensor.leietaker_side_sist_publisert` | Tidsstempel. Attributt: lenke. |
+| `sensor.leietaker_lenke` | Leietakerlenken, slik at du kan se og kopiere den. Ukjent hvis siden ikke publiseres. |
 | `binary_sensor.leietaker_oppgjor_venter_godkjenning` | `on` når en periode venter på godkjenning. |
+| `button.leietaker_send_lenke` | Sender en kort e-post til leietaker med bare lenken. |
+| `button.leietaker_merk_som_betalt` | Merker alle utestående oppgjør som betalt. |
 
 Estimatet er forrige periodes leilighets-kWh × (1 + `endring_prosent`/100), priset til forrige periodes snittpris. «Hittil»-tall fra regnskapssensoren brukes bare når den faktisk viser inneværende måned.
+
+> **Installerte du 0.1.0?** Da kan entity-ID-ene dine ha fått «leietaker» to ganger (for eksempel `sensor.stromregnskap_leietaker_leietaker_utestaende`). Det er rettet i 0.1.1, men eksisterende entiteter beholder navnet sitt. Fjern integrasjonen og legg den til på nytt, eller gi entitetene nytt navn i Home Assistant.
 
 ## Tjenester
 
@@ -77,7 +84,9 @@ Estimatet er forrige periodes leilighets-kWh × (1 + `endring_prosent`/100), pri
 |---|---|---|
 | `stromregnskap_leietaker.generer_oppgjor` | `periode` (ÅÅÅÅ-MM, standard forrige måned), `tving`, `send_epost` | Lager oppgjør manuelt. `tving` hopper over rimelighetskontrollen. |
 | `stromregnskap_leietaker.godkjenn_oppgjor` | `periode` | Sender et oppgjør som venter på godkjenning. |
-| `stromregnskap_leietaker.send_epost_pa_nytt` | `periode` | Sender e-posten på nytt. |
+| `stromregnskap_leietaker.send_epost_pa_nytt` | `periode` | Sender oppgjøret på e-post på nytt. |
+| `stromregnskap_leietaker.send_lenke` | | Sender en kort e-post til leietaker med lenken til siden. |
+| `stromregnskap_leietaker.merk_betalt` | `periode` (valgfri) | Merker utestående oppgjør som betalt. Uten periode: alle utestående. |
 | `stromregnskap_leietaker.sett_status` | `periode`, `status` | `betalt`, `ikke_betalt` eller `unntak_ikke_betalt`. |
 | `stromregnskap_leietaker.publiser_side` | | Lager siden på nytt nå. |
 | `stromregnskap_leietaker.slett_periode` | `periode`, `bekreft: true` | Sletter en periode. Et sendt oppgjør er låst og kan bare fjernes slik. |
@@ -107,6 +116,7 @@ Dette er avvik og ting som ikke er gjort. Det er viktig å se på dem før integ
 4. **Hvis du hopper over historikkimporten**, vil første kjøring prøve å lage oppgjør for forrige måned og sende det til leietaker.
 5. **Ruter kan ikke fjernes i Home Assistant.** Etter `ny_leietaker` svarer den gamle lenken 404 umiddelbart, men ruten ligger registrert til neste omstart.
 6. **App-passordet ligger i klartekst i config entry.**
+7. **Datasikkerhet er ikke god nok ennå (planlagt i 0.2.0).** Historikken ligger bare i Home Assistants `.storage` (dekkes av vanlige Home Assistant-sikkerhetskopier) og følger config entry'en. Det finnes ingen egen sikkerhetskopi, og integrasjonen lagrer ikke selv et øyeblikksbilde av kildetallene gjennom måneden. Mister `sensor.jarvis_stromregnskap` tallene for en måned før den 3., kan oppgjøret ikke lages automatisk.
 
 ## Overgang fra Claude-oppgavene
 

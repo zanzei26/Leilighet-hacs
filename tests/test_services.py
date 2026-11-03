@@ -30,6 +30,8 @@ async def test_alle_tjenester_er_registrert(hass, integrasjon):
         "publiser_side",
         "slett_periode",
         "ny_leietaker",
+        "send_lenke",
+        "merk_betalt",
     }
     assert forventet <= set(hass.services.async_services()[DOMAIN])
 
@@ -174,3 +176,30 @@ async def test_ny_leietaker_overskriver_ikke_eksisterende_arkivfil(hass, integra
         p.name for p in (integrasjon.tmp / "stromregnskap_leietaker" / "arkiv").glob("*.json")
     )
     assert filer == ["kari_nordmann_2026-11-10.json", "kari_nordmann_2026-11-10_2.json"]
+
+
+async def test_send_lenke_tjenesten_sender_lenken_til_leietaker(hass, integrasjon):
+    await _kall(hass, "send_lenke")
+    assert integrasjon.epost.call_count == 1
+    msg = integrasjon.epost.call_args.kwargs["melding"]
+    assert "kari@example.com" in msg["To"]
+    assert "/local/testslug123/index.html" in msg.get_body(("plain",)).get_content()
+
+
+async def test_send_lenke_tjenesten_feiler_med_tjenestefeil_ved_smtp_feil(hass, integrasjon):
+    integrasjon.epost.side_effect = SmtpFeil("auth", "avvist")
+    with pytest.raises(HomeAssistantError):
+        await _kall(hass, "send_lenke")
+
+
+async def test_merk_betalt_tjenesten(hass, integrasjon):
+    await _kall(hass, "merk_betalt")
+    assert _lager(integrasjon).finn("2026-10")["status"] == "betalt"
+    assert hass.states.get("sensor.leietaker_utestaende").state == "0.0"
+    with pytest.raises(ServiceValidationError):
+        await _kall(hass, "merk_betalt")  # ingenting utestående lenger
+
+
+async def test_merk_betalt_tjenesten_med_periode(hass, integrasjon):
+    await _kall(hass, "merk_betalt", {"periode": "2026-10"})
+    assert _lager(integrasjon).finn("2026-10")["status"] == "betalt"

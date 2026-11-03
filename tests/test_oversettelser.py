@@ -50,6 +50,8 @@ TJENESTER = {
     "publiser_side": set(),
     "slett_periode": {"periode", "bekreft"},
     "ny_leietaker": set(),
+    "send_lenke": set(),
+    "merk_betalt": {"periode"},
 }
 
 
@@ -149,3 +151,68 @@ def test_skjemaene_i_services_py_stemmer_med_testens_forventning():
     assert {str(k) for k in services.SKJEMA_GENERER.schema} == TJENESTER["generer_oppgjor"]
     assert {str(k) for k in services.SKJEMA_STATUS.schema} == TJENESTER["sett_status"]
     assert {str(k) for k in services.SKJEMA_SLETT.schema} == TJENESTER["slett_periode"]
+
+
+# --- forklaringer under hvert felt ------------------------------------------------
+
+
+@pytest.mark.parametrize("spraak", SPRAAK)
+@pytest.mark.parametrize("steg", list(SKJEMAER))
+def test_hvert_felt_i_oppsettsflyten_har_en_ekte_forklaring(spraak, steg):
+    t = _les(spraak)["config"]["step"][steg]
+    forklaringer = t.get("data_description", {})
+    assert not SKJEMAER[steg] - set(forklaringer), f"{steg}: mangler forklaring"
+    for felt in SKJEMAER[steg]:
+        assert len(forklaringer[felt]) >= 25, f"{steg}.{felt} er for kort til å forklare noe"
+
+
+@pytest.mark.parametrize("spraak", SPRAAK)
+@pytest.mark.parametrize("steg", ["kilder", "epost", "side", "grenser"])
+def test_hvert_felt_i_valgflyten_har_en_ekte_forklaring(spraak, steg):
+    forklaringer = _les(spraak)["options"]["step"][steg].get("data_description", {})
+    assert not SKJEMAER[steg] - set(forklaringer)
+    assert all(len(forklaringer[f]) >= 25 for f in SKJEMAER[steg])
+
+
+def test_valgflyten_for_leietaker_har_forklaringer_for_alle_felt():
+    for spraak in SPRAAK:
+        f = _les(spraak)["options"]["step"]["leietaker"].get("data_description", {})
+        assert not SKJEMAER["user"] - set(f)
+
+
+def test_kildene_forklarer_hva_sensoren_maa_inneholde_og_hva_den_brukes_til():
+    d = _les("nb")["config"]["step"]["kilder"]["data_description"]
+    assert "maneder" in d["ent_regnskap"] and "denne_maneden" in d["ent_regnskap"]
+    assert "snittpris" in d["ent_regnskap"]
+    assert "last_period" in d["ent_utility"] and "nullstilles" in d["ent_utility"]
+    assert "endring_prosent" in d["ent_prognose"] and "estimat" in d["ent_prognose"].lower()
+    assert "bare" in d["ent_import"] and "bare" in d["ent_effekt"]  # kun til visning
+    assert "notify." in d["varsel_tjeneste"] and "Handlinger" in d["varsel_tjeneste"]
+
+
+def test_kildetrinnet_skiller_mellom_det_som_trengs_og_det_som_bare_vises():
+    beskr = _les("nb")["config"]["step"]["kilder"]["description"]
+    assert "regner ikke ut" in beskr.lower() or "ferdige tall" in beskr.lower()
+    assert "må" in beskr.lower() and "visning" in beskr.lower()
+
+
+def test_epostttrinnet_forklarer_app_passord_og_gmail():
+    d = _les("nb")["config"]["step"]["epost"]
+    assert "smtp.gmail.com" in d["description"] and "app-passord" in d["description"].lower()
+    assert "apppasswords" in d["description"]
+    assert "16" in d["data_description"]["smtp_passord"]
+    assert (
+        "leietaker" in d["data_description"]["send_test"].lower()
+    )  # at test ikke går til leietaker
+
+
+def test_importtrinnet_advarer_mot_a_hoppe_over_importen():
+    d = _les("nb")["config"]["step"]["importer"]["data_description"]["importer_historikk"]
+    assert "sendes" in d or "sender" in d
+
+
+def test_grensene_forklarer_hva_som_skjer_ved_brudd():
+    t = _les("nb")["config"]["step"]["grenser"]
+    assert "godkjenn" in t["description"].lower()
+    assert "±" in t["data_description"]["endring_maks_prosent"]
+    assert "generer" in t["data_description"]["siste_sjekkdag"].lower()

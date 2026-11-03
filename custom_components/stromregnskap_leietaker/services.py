@@ -28,6 +28,7 @@ SKJEMA_STATUS = vol.Schema(
 )
 SKJEMA_SLETT = vol.Schema({**PERIODE_PAAKREVD, vol.Required("bekreft"): cv.boolean})
 SKJEMA_TOM = vol.Schema({})
+SKJEMA_VALGFRI_PERIODE = vol.Schema({vol.Optional("periode"): cv.string})
 
 
 def _koordinator(hass: HomeAssistant) -> StromregnskapCoordinator:
@@ -72,6 +73,14 @@ async def _ny_leietaker(call: ServiceCall) -> dict[str, Any]:
     return await _koordinator(call.hass).async_ny_leietaker()
 
 
+async def _merk_betalt(call: ServiceCall) -> None:
+    await _koordinator(call.hass).async_merk_betalt(call.data.get("periode"))
+
+
+async def _send_lenke(call: ServiceCall) -> None:
+    await _koordinator(call.hass).async_send_lenke()
+
+
 def async_registrer_tjenester(hass: HomeAssistant) -> None:
     """Registreres én gang i async_setup, uavhengig av om entry'en er lastet."""
     reg = hass.services.async_register
@@ -94,3 +103,5 @@ def async_registrer_tjenester(hass: HomeAssistant) -> None:
         SKJEMA_TOM,
         supports_response=SupportsResponse.OPTIONAL,
     )
+    reg(DOMAIN, "send_lenke", _send_lenke, SKJEMA_TOM)
+    reg(DOMAIN, "merk_betalt", _merk_betalt, SKJEMA_VALGFRI_PERIODE)

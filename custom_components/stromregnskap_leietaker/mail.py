@@ -30,6 +30,11 @@ def _adresse(navn: str, epost: str) -> Address:
     return Address(display_name=navn, addr_spec=epost)
 
 
+def _fornavn(navn: str) -> str:
+    deler = navn.split()
+    return deler[0] if deler else ""
+
+
 def _gate(adresse: str) -> str:
     """«Testveien 1, 1. etasje» → «Testveien 1»."""
     return adresse.split(",")[0].strip()
@@ -45,7 +50,7 @@ def bygg_epost(
 ) -> EmailMessage:
     """Bygger månedsoppgjøret som flerdelt e-post (ren tekst + HTML)."""
     maaned = maaned_tekst(periode["id"])
-    fornavn = leietaker["navn"].split()[0] if leietaker["navn"].strip() else ""
+    fornavn = _fornavn(leietaker["navn"])
     kwh = f"{fmt_tall(periode['leilighet_kwh'], 1)} kWh"
     snitt = f"{fmt_tall(periode['snitt'], 4)} kr/kWh"
     belop = f"{fmt_tall(periode['belop'], 2)} kr"
@@ -102,6 +107,56 @@ Hilsen
 
     msg = EmailMessage()
     msg["Subject"] = f"Strømoppgjør {maaned} – {_gate(leietaker['adresse'])}"
+    msg["From"] = _adresse(utleier["navn"], utleier["epost"])
+    msg["To"] = _adresse(leietaker["navn"], leietaker["epost"])
+    if cc_utleier:
+        msg["Cc"] = _adresse(utleier["navn"], utleier["epost"])
+    msg.set_content(tekst)
+    msg.add_alternative(html, subtype="html")
+    return msg
+
+
+def bygg_lenkepost(
+    *,
+    leietaker: dict[str, Any],
+    utleier: dict[str, Any],
+    side_url: str,
+    cc_utleier: bool = True,
+) -> EmailMessage:
+    """Kort e-post med bare lenken til leietakersiden."""
+    fornavn = _fornavn(leietaker["navn"])
+    forklaring = (
+        "Der ser du alltid hva som er utestående, forbruket ditt hittil denne måneden og "
+        "historikken for tidligere måneder, med forfall og hvor du betaler. "
+        "Siden oppdateres automatisk."
+    )
+    advarsel = "Lenken er personlig. Ikke del den med andre. Legg den gjerne som bokmerke."
+    tekst = f"""Hei {fornavn},
+
+Her er lenken til siden din for strømoppgjør:
+
+{side_url}
+
+{forklaring}
+
+{advarsel}
+
+Hilsen
+{utleier["navn"]}
+"""
+    e = escape
+    html = f"""<!doctype html>
+<html lang="nb"><body style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;color:#1b1f24">
+<p>Hei {e(fornavn)},</p>
+<p>Her er lenken til siden din for strømoppgjør:</p>
+<p><a href="{e(side_url, quote=True)}">{e(side_url)}</a></p>
+<p>{e(forklaring)}</p>
+<p>{e(advarsel)}</p>
+<p>Hilsen<br>{e(utleier["navn"])}</p>
+</body></html>
+"""
+    msg = EmailMessage()
+    msg["Subject"] = f"Din side for strømoppgjør – {_gate(leietaker['adresse'])}"
     msg["From"] = _adresse(utleier["navn"], utleier["epost"])
     msg["To"] = _adresse(leietaker["navn"], leietaker["epost"])
     if cc_utleier:

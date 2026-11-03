@@ -8,6 +8,7 @@ import pytest
 from custom_components.stromregnskap_leietaker.mail import (
     SmtpFeil,
     bygg_epost,
+    bygg_lenkepost,
     bygg_testepost,
     send_epost,
 )
@@ -130,3 +131,43 @@ def test_avvist_mottaker_gir_smtpfeil_send(smtp):
     with pytest.raises(SmtpFeil) as exc:
         send_epost(host="h", port=587, brukernavn="u", passord="p", melding=_msg())
     assert exc.value.kind == "send"
+
+
+# --- e-post med bare lenken -------------------------------------------------------
+
+
+def _lenke(**over):
+    args = dict(leietaker=LEIETAKER, utleier=UTLEIER, side_url=URL, cc_utleier=True)
+    args.update(over)
+    return bygg_lenkepost(**args)
+
+
+def test_lenkeposten_har_emne_avsender_til_og_cc():
+    msg = _lenke()
+    assert msg["Subject"] == "Din side for strømoppgjør – Testveien 1"
+    assert "ola@example.com" in msg["From"]
+    assert "kari@example.com" in msg["To"]
+    assert "ola@example.com" in msg["Cc"]
+
+
+def test_lenkeposten_kan_sendes_uten_kopi():
+    assert _lenke(cc_utleier=False)["Cc"] is None
+
+
+def test_lenkeposten_forklarer_hva_siden_viser_og_ber_om_a_ikke_dele_lenken():
+    msg = _lenke()
+    tekst = msg.get_body(("plain",)).get_content()
+    html = msg.get_body(("html",)).get_content()
+    assert tekst.startswith("Hei Kari,")
+    assert URL in tekst and URL in html
+    assert 'href="' + URL + '"' in html
+    for ord_ in ("utestående", "historikk", "forbruk"):
+        assert ord_ in tekst.lower()
+    assert "ikke del" in tekst.lower()
+    assert "1234.56.78903" not in tekst  # kontonummeret hører hjemme i selve oppgjøret
+
+
+def test_lenkeposten_har_ingen_vedlegg_og_escaper_html():
+    msg = _lenke(leietaker={**LEIETAKER, "navn": "<b>Eva</b>"})
+    assert list(msg.iter_attachments()) == []
+    assert "<b>Eva</b>" not in msg.get_body(("html",)).get_content()

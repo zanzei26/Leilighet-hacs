@@ -64,3 +64,13 @@ slett_periode:
         boolean:
 
 ny_leietaker:
+
+send_lenke:
+
+merk_betalt:
+  fields:
+    periode:
+      required: false
+      example: "2026-10"
+      selector:
+        text:

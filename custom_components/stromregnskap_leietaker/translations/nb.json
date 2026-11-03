@@ -3,7 +3,7 @@
     "step": {
       "user": {
         "title": "Leietaker og utleier",
-        "description": "Opplysninger om leietaker, utleier og betalingen.",
+        "description": "Fortell hvem som leier, hvem som leier ut og hvordan det betales. Opplysningene brukes i e-posten til leietaker og på leietakersiden. Alt kan endres senere under Konfigurer.",
         "data": {
           "leietaker_navn": "Leietakers navn",
           "leietaker_epost": "Leietakers e-post",
@@ -13,11 +13,21 @@
           "utleier_epost": "Utleiers e-post",
           "kontonummer": "Kontonummer",
           "forfallsdag": "Forfallsdag i måneden (1–28)"
+        },
+        "data_description": {
+          "leietaker_navn": "Vises på leietakersiden. Fornavnet brukes i hilsenen i e-posten.",
+          "leietaker_epost": "Hit sendes månedsoppgjøret. Test gjerne med din egen adresse først og bytt senere under Konfigurer.",
+          "adresse": "Vises på siden. Gateadressen (det foran første komma) brukes i emnet på e-posten.",
+          "innflyttet": "Datoen leieforholdet startet. Vises på leietakersiden.",
+          "utleier_navn": "Navnet som vises som avsender av e-posten og som utleier på siden.",
+          "utleier_epost": "Avsenderadresse i e-posten, og dit test-e-posten sendes. Kopi av hvert oppgjør kan også sendes hit.",
+          "kontonummer": "Vises på siden og i e-posten som kontoen leietaker skal betale til.",
+          "forfallsdag": "Dagen i måneden etter perioden som beløpet forfaller (1–28). Fra og med denne dagen merkes oppgjøret automatisk som betalt."
         }
       },
       "kilder": {
         "title": "Datakilder",
-        "description": "Sensorene integrasjonen leser fra. Standardverdiene passer det eksisterende oppsettet.",
+        "description": "Integrasjonen regner ikke ut husets strømpris selv. Den leser ferdige tall fra sensorer du allerede har, og du velger her hvilke.\n\n**Må være riktige for at oppgjør kan lages:** strømregnskapet og varslingstjenesten. Leilighetens forbruk brukes til kontroll og til «hittil»-tallene.\n\n**Bare til visning og estimat:** rå måler, effekt og prognose. Skjemaet krever at du velger en sensor for alle, men disse tre påvirker ikke selve oppgjøret.\n\nStandardverdiene passer det opprinnelige oppsettet.",
         "data": {
           "ent_regnskap": "Strømregnskap (husets månedstall)",
           "ent_utility": "Leilighetens forbruk denne måneden (utility_meter)",
@@ -25,11 +35,19 @@
           "ent_effekt": "Øyeblikkseffekt (W)",
           "ent_prognose": "Forbruksprognose",
           "varsel_tjeneste": "Varslingstjeneste til utleier (notify.navn)"
+        },
+        "data_description": {
+          "ent_regnskap": "Sensoren med husets strømtall per måned. Den må ha attributtet «maneder» (liste over avsluttede måneder, hver med mnd, kwh, kraft, nettleie, norgespris, sum og snitt, og gjerne leilighet_kwh) og «denne_maneden» (samme felter for måneden som pågår). Husets snittpris hentes bare herfra.",
+          "ent_utility": "Leilighetens forbruk hittil denne måneden i kWh, fra en måler som nullstilles hver måned (en utility_meter med månedlig syklus). Attributtet «last_period» (forrige måneds sluttverdi) brukes til å kontrollere kWh i oppgjøret.",
+          "ent_import": "Leilighetens rå, akkumulerte målerstand i kWh. Brukes bare til visning (som attributtet maaler_total_kwh) og påvirker ikke oppgjøret.",
+          "ent_effekt": "Leilighetens øyeblikkseffekt i W. Brukes bare til visning (som attributtet effekt_w) og påvirker ikke oppgjøret.",
+          "ent_prognose": "Sensoren som sier hvor mye forbruket ventes å endre seg mot forrige måned, i prosent. Den må ha attributtet «endring_prosent». Brukes bare til månedsestimatet (forrige måneds kWh × (1 + prosent/100)). Mangler den, vises ikke noe estimat.",
+          "varsel_tjeneste": "Hvor varsler til deg som utleier sendes, for eksempel når et oppgjør venter på godkjenning eller e-post feiler. Skriv tjenesten som notify.navn. Navnene finner du under Utviklerverktøy → Handlinger ved å søke på «notify». Tjenesten må finnes for at du skal komme videre."
         }
       },
       "epost": {
         "title": "E-post (SMTP)",
-        "description": "Oppgjøret sendes fra Home Assistant via SMTP. For Gmail brukes smtp.gmail.com, port 587 og et app-passord. Passordet lagres i oppsettet uten kryptering.",
+        "description": "Oppgjøret sendes fra Home Assistant via e-postkontoen du oppgir. For Gmail: server smtp.gmail.com, port 587, ditt Gmail-brukernavn og et **app-passord** (ikke det vanlige passordet). Et app-passord lager du på https://myaccount.google.com/apppasswords og det krever 2-trinns bekreftelse. Passordet lagres uten kryptering i Home Assistants oppsett, så lag et eget til dette.",
         "data": {
           "smtp_host": "SMTP-server",
           "smtp_port": "Port",
@@ -37,18 +55,29 @@
           "smtp_passord": "App-passord",
           "cc_utleier": "Send kopi til utleier",
           "send_test": "Send test-e-post til utleier nå"
+        },
+        "data_description": {
+          "smtp_host": "Adressen til e-postserveren. For Gmail: smtp.gmail.com.",
+          "smtp_port": "Port for kryptert tilkobling (STARTTLS). For Gmail: 587.",
+          "smtp_bruker": "Brukernavnet på e-postkontoen, vanligvis hele e-postadressen. Foreslås fra utleiers e-post.",
+          "smtp_passord": "App-passordet på 16 tegn fra Google, ikke det vanlige Google-passordet. Mellomrom i passordet gjør ikke noe.",
+          "cc_utleier": "Sender en kopi av hvert oppgjør til utleiers e-postadresse, så du ser nøyaktig hva leietaker får.",
+          "send_test": "Sender en prøve-e-post til utleiers adresse når du går videre, for å vise at innloggingen virker. Ingenting sendes til leietaker nå."
         }
       },
       "side": {
         "title": "Leietakerside",
-        "description": "Leietaker får en fast lenke til en side med utestående beløp, forbruk hittil denne måneden og historikk. Lenken har en hemmelig, tilfeldig del og krever ikke innlogging.\n\nLenke: {lenke}",
+        "description": "Leietaker får en fast lenke til en vanlig nettside som viser utestående beløp, forbruk hittil denne måneden og historikk. Siden krever ikke innlogging, og lenken har en hemmelig, tilfeldig del, så den kan ikke gjettes. Det er samme lenke som står i e-posten. Er Nabu Casa slått på, brukes den adressen, ellers ekstern URL.\n\nLenke: {lenke}",
         "data": {
           "publiser_side": "Publiser leietakersiden"
+        },
+        "data_description": {
+          "publiser_side": "Slår du av, lages ingen side og lenken slutter å virke. E-postene sendes da uten lenke."
         }
       },
       "grenser": {
         "title": "Rimelighetskontroll og kjøretid",
-        "description": "Passerer oppgjøret kontrollen, sendes det automatisk. Ellers får du et varsel og oppgjøret venter på din godkjenning.",
+        "description": "Oppgjøret lages automatisk én gang i måneden og kontrolleres før det sendes. Bryter det en av reglene under, sendes ingen e-post: du får et varsel og må godkjenne oppgjøret selv (eller rette dataene først).",
         "data": {
           "snitt_min": "Laveste snittpris (kr/kWh)",
           "snitt_maks": "Høyeste snittpris (kr/kWh)",
@@ -56,6 +85,14 @@
           "kjoredag": "Første kjøredag i måneden",
           "kjoretid": "Klokkeslett",
           "siste_sjekkdag": "Siste dag det sjekkes"
+        },
+        "data_description": {
+          "snitt_min": "Husets snittpris lavere enn dette regnes som feil (kr/kWh).",
+          "snitt_maks": "Husets snittpris høyere enn dette regnes som feil (kr/kWh).",
+          "endring_maks_prosent": "Hvor mye leilighetens kWh kan avvike fra forrige periode, opp eller ned, før du må godkjenne oppgjøret selv. 60 betyr ±60 %.",
+          "kjoredag": "Dagen i måneden (1–28) integrasjonen begynner å lage oppgjør for forrige måned.",
+          "kjoretid": "Klokkeslettet på kjøredagen den begynner å prøve. Brukes også som tidspunkt for varselet hvis dataene mangler.",
+          "siste_sjekkdag": "Siste dag den fortsetter å prøve hvis dataene ikke er klare. Etter det må du kjøre «Generer oppgjør» selv. Kan ikke være før kjøredagen."
         }
       },
       "importer": {
@@ -63,16 +100,25 @@
         "description": "Importer periodene som allerede er fakturert, så historikk og utestående stemmer fra start:\n\n{historikk}",
         "data": {
           "importer_historikk": "Importer eksisterende historikk"
+        },
+        "data_description": {
+          "importer_historikk": "Anbefalt. Uten import finnes ikke forrige måned, og integrasjonen lager og sender da et oppgjør for den til leietaker så snart den er satt opp, hvis det er mellom kjøredagen og siste sjekkdag."
         }
       },
       "reconfigure": {
         "title": "Ny leietaker",
-        "description": "Fyll inn opplysninger om den nye leietakeren.",
+        "description": "Fyll inn opplysninger om den nye leietakeren. Historikken for forrige leietaker er arkivert, og lenken er byttet.",
         "data": {
           "leietaker_navn": "Leietakers navn",
           "leietaker_epost": "Leietakers e-post",
           "adresse": "Adresse",
           "innflyttet": "Innflyttingsdato"
+        },
+        "data_description": {
+          "leietaker_navn": "Vises på leietakersiden. Fornavnet brukes i hilsenen i e-posten.",
+          "leietaker_epost": "Hit sendes månedsoppgjøret. Test gjerne med din egen adresse først og bytt senere under Konfigurer.",
+          "adresse": "Vises på siden. Gateadressen (det foran første komma) brukes i emnet på e-posten.",
+          "innflyttet": "Datoen leieforholdet startet. Vises på leietakersiden."
         }
       }
     },
@@ -114,7 +160,18 @@
           "utleier_epost": "Utleiers e-post",
           "kontonummer": "Kontonummer",
           "forfallsdag": "Forfallsdag i måneden (1–28)"
-        }
+        },
+        "data_description": {
+          "leietaker_navn": "Vises på leietakersiden. Fornavnet brukes i hilsenen i e-posten.",
+          "leietaker_epost": "Hit sendes månedsoppgjøret. Test gjerne med din egen adresse først og bytt senere under Konfigurer.",
+          "adresse": "Vises på siden. Gateadressen (det foran første komma) brukes i emnet på e-posten.",
+          "innflyttet": "Datoen leieforholdet startet. Vises på leietakersiden.",
+          "utleier_navn": "Navnet som vises som avsender av e-posten og som utleier på siden.",
+          "utleier_epost": "Avsenderadresse i e-posten, og dit test-e-posten sendes. Kopi av hvert oppgjør kan også sendes hit.",
+          "kontonummer": "Vises på siden og i e-posten som kontoen leietaker skal betale til.",
+          "forfallsdag": "Dagen i måneden etter perioden som beløpet forfaller (1–28). Fra og med denne dagen merkes oppgjøret automatisk som betalt."
+        },
+        "description": "Fortell hvem som leier, hvem som leier ut og hvordan det betales. Opplysningene brukes i e-posten til leietaker og på leietakersiden. Alt kan endres senere under Konfigurer."
       },
       "kilder": {
         "title": "Datakilder og varsling",
@@ -125,7 +182,16 @@
           "ent_effekt": "Øyeblikkseffekt (W)",
           "ent_prognose": "Forbruksprognose",
           "varsel_tjeneste": "Varslingstjeneste til utleier (notify.navn)"
-        }
+        },
+        "data_description": {
+          "ent_regnskap": "Sensoren med husets strømtall per måned. Den må ha attributtet «maneder» (liste over avsluttede måneder, hver med mnd, kwh, kraft, nettleie, norgespris, sum og snitt, og gjerne leilighet_kwh) og «denne_maneden» (samme felter for måneden som pågår). Husets snittpris hentes bare herfra.",
+          "ent_utility": "Leilighetens forbruk hittil denne måneden i kWh, fra en måler som nullstilles hver måned (en utility_meter med månedlig syklus). Attributtet «last_period» (forrige måneds sluttverdi) brukes til å kontrollere kWh i oppgjøret.",
+          "ent_import": "Leilighetens rå, akkumulerte målerstand i kWh. Brukes bare til visning (som attributtet maaler_total_kwh) og påvirker ikke oppgjøret.",
+          "ent_effekt": "Leilighetens øyeblikkseffekt i W. Brukes bare til visning (som attributtet effekt_w) og påvirker ikke oppgjøret.",
+          "ent_prognose": "Sensoren som sier hvor mye forbruket ventes å endre seg mot forrige måned, i prosent. Den må ha attributtet «endring_prosent». Brukes bare til månedsestimatet (forrige måneds kWh × (1 + prosent/100)). Mangler den, vises ikke noe estimat.",
+          "varsel_tjeneste": "Hvor varsler til deg som utleier sendes, for eksempel når et oppgjør venter på godkjenning eller e-post feiler. Skriv tjenesten som notify.navn. Navnene finner du under Utviklerverktøy → Handlinger ved å søke på «notify». Tjenesten må finnes for at du skal komme videre."
+        },
+        "description": "Integrasjonen regner ikke ut husets strømpris selv. Den leser ferdige tall fra sensorer du allerede har, og du velger her hvilke.\n\n**Må være riktige for at oppgjør kan lages:** strømregnskapet og varslingstjenesten. Leilighetens forbruk brukes til kontroll og til «hittil»-tallene.\n\n**Bare til visning og estimat:** rå måler, effekt og prognose. Skjemaet krever at du velger en sensor for alle, men disse tre påvirker ikke selve oppgjøret.\n\nStandardverdiene passer det opprinnelige oppsettet."
       },
       "epost": {
         "title": "E-post (SMTP)",
@@ -137,13 +203,24 @@
           "smtp_passord": "App-passord",
           "cc_utleier": "Send kopi til utleier",
           "send_test": "Send test-e-post til utleier nå"
+        },
+        "data_description": {
+          "smtp_host": "Adressen til e-postserveren. For Gmail: smtp.gmail.com.",
+          "smtp_port": "Port for kryptert tilkobling (STARTTLS). For Gmail: 587.",
+          "smtp_bruker": "Brukernavnet på e-postkontoen, vanligvis hele e-postadressen. Foreslås fra utleiers e-post.",
+          "smtp_passord": "La stå tomt for å beholde gjeldende app-passord. Fyll inn bare hvis du har laget et nytt.",
+          "cc_utleier": "Sender en kopi av hvert oppgjør til utleiers e-postadresse, så du ser nøyaktig hva leietaker får.",
+          "send_test": "Sender en prøve-e-post til utleiers adresse når du går videre, for å vise at innloggingen virker. Ingenting sendes til leietaker nå."
         }
       },
       "side": {
         "title": "Leietakerside",
-        "description": "Leietaker får en fast lenke til en side med utestående beløp, forbruk hittil denne måneden og historikk. Lenken har en hemmelig, tilfeldig del og krever ikke innlogging.\n\nLenke: {lenke}",
+        "description": "Leietaker får en fast lenke til en vanlig nettside som viser utestående beløp, forbruk hittil denne måneden og historikk. Siden krever ikke innlogging, og lenken har en hemmelig, tilfeldig del, så den kan ikke gjettes. Det er samme lenke som står i e-posten. Er Nabu Casa slått på, brukes den adressen, ellers ekstern URL.\n\nLenke: {lenke}",
         "data": {
           "publiser_side": "Publiser leietakersiden"
+        },
+        "data_description": {
+          "publiser_side": "Slår du av, lages ingen side og lenken slutter å virke. E-postene sendes da uten lenke."
         }
       },
       "grenser": {
@@ -155,7 +232,16 @@
           "kjoredag": "Første kjøredag i måneden",
           "kjoretid": "Klokkeslett",
           "siste_sjekkdag": "Siste dag det sjekkes"
-        }
+        },
+        "data_description": {
+          "snitt_min": "Husets snittpris lavere enn dette regnes som feil (kr/kWh).",
+          "snitt_maks": "Husets snittpris høyere enn dette regnes som feil (kr/kWh).",
+          "endring_maks_prosent": "Hvor mye leilighetens kWh kan avvike fra forrige periode, opp eller ned, før du må godkjenne oppgjøret selv. 60 betyr ±60 %.",
+          "kjoredag": "Dagen i måneden (1–28) integrasjonen begynner å lage oppgjør for forrige måned.",
+          "kjoretid": "Klokkeslettet på kjøredagen den begynner å prøve. Brukes også som tidspunkt for varselet hvis dataene mangler.",
+          "siste_sjekkdag": "Siste dag den fortsetter å prøve hvis dataene ikke er klare. Etter det må du kjøre «Generer oppgjør» selv. Kan ikke være før kjøredagen."
+        },
+        "description": "Oppgjøret lages automatisk én gang i måneden og kontrolleres før det sendes. Bryter det en av reglene under, sendes ingen e-post: du får et varsel og må godkjenne oppgjøret selv (eller rette dataene først)."
       }
     },
     "error": {
@@ -279,6 +365,20 @@
     "ny_leietaker": {
       "name": "Ny leietaker",
       "description": "Arkiverer historikken, tømmer den, bytter leietakerlenke og åpner rekonfigurering for nye leietakerdata."
+    },
+    "send_lenke": {
+      "name": "Send lenke til leietaker",
+      "description": "Sender en kort e-post til leietaker med lenken til leietakersiden. Brukes første gang leietaker skal få lenken, eller hvis den er mistet."
+    },
+    "merk_betalt": {
+      "name": "Merk som betalt",
+      "description": "Merker utestående oppgjør som betalt. Uten periode merkes alle utestående (også de med «unntak»). Oppgjør som venter på godkjenning røres ikke.",
+      "fields": {
+        "periode": {
+          "name": "Periode",
+          "description": "Måneden som ÅÅÅÅ-MM. La stå tomt for å merke alt utestående som betalt."
+        }
+      }
     }
   }
 }

@@ -10,7 +10,13 @@ from homeassistant.exceptions import ServiceValidationError
 from homeassistant.util import dt as dt_util
 from homeassistant.util import slugify
 
-from .calc import GYLDIGE_MANUELLE_STATUSER, STATUS_IKKE_BETALT, STATUS_VENTER
+from .calc import (
+    GYLDIGE_MANUELLE_STATUSER,
+    STATUS_BETALT,
+    STATUS_IKKE_BETALT,
+    STATUS_VENTER,
+    UTESTAAENDE_STATUSER,
+)
 from .const import CONF_SLUG, DOMAIN, SLUG_LENGDE_BYTES
 from .filer import fjern_mappe, skriv_arkiv
 from .url import bygg_side_url
@@ -47,6 +53,26 @@ class HandlingerMixin:
         p["status"] = status
         await self.lager.async_lagre()
         self.async_set_updated_data(await self._publiser(dt_util.now()))
+
+    async def async_merk_betalt(self, periode_id: str | None = None) -> list[str]:
+        """Merker utestående perioder som betalt. Uten periode: alle utestående.
+
+        Oppgjør som venter på godkjenning er ikke utestående og røres ikke.
+        """
+        if periode_id is not None:
+            p = self._hent_periode(periode_id)
+            if p["status"] not in UTESTAAENDE_STATUSER:
+                raise ServiceValidationError(f"Perioden {periode_id} er ikke utestående.")
+            valgt = [p]
+        else:
+            valgt = [p for p in self.lager.perioder if p["status"] in UTESTAAENDE_STATUSER]
+            if not valgt:
+                raise ServiceValidationError("Det er ingenting utestående å merke som betalt.")
+        for p in valgt:
+            p["status"] = STATUS_BETALT
+        await self.lager.async_lagre()
+        self.async_set_updated_data(await self._publiser(dt_util.now()))
+        return [p["id"] for p in valgt]
 
     async def async_slett_periode(self, periode_id: str, *, bekreft: bool) -> None:
         self._hent_periode(periode_id)

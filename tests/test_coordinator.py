@@ -431,3 +431,99 @@ async def test_side_url_bruker_cloud_foerst_og_faller_tilbake_til_ekstern_url(ha
         hass.config.external_url = None
         hass.config.internal_url = None
         assert o.coordinator.side_url is None
+
+
+# --- lenken til leietaker -----------------------------------------------------------
+
+LENKE = "https://eksempel.ui.nabu.casa/local/testslug123/index.html"
+
+
+async def test_send_lenke_sender_kort_epost_til_leietaker_og_varsler_utleier(hass, oppsett):
+    o = oppsett
+    await o.coordinator.async_send_lenke()
+    assert o.epost.call_count == 1
+    msg = o.epost.call_args.kwargs["melding"]
+    assert "kari@example.com" in msg["To"] and msg["Subject"].startswith("Din side")
+    assert LENKE in msg.get_body(("plain",)).get_content()
+    assert any("Lenke sendt" in c.data["title"] for c in o.varsler)
+
+
+async def test_send_lenke_uten_kjent_adresse_gir_valideringsfeil(hass, oppsett):
+    o = oppsett
+    hass.config.external_url = None
+    hass.config.internal_url = None
+    with pytest.raises(ServiceValidationError):
+        await o.coordinator.async_send_lenke()
+    assert o.epost.call_count == 0
+
+
+async def test_send_lenke_naar_siden_er_slaatt_av_gir_valideringsfeil(hass, oppsett):
+    o = oppsett
+    hass.config_entries.async_update_entry(o.entry, data={**o.entry.data, "publiser_side": False})
+    with pytest.raises(ServiceValidationError):
+        await o.coordinator.async_send_lenke()
+    assert o.epost.call_count == 0
+
+
+async def test_send_lenke_som_feiler_gir_kjoretidsfeil_ikke_valideringsfeil(hass, oppsett):
+    o = oppsett
+    o.epost.side_effect = SmtpFeil("connect", "nede")
+    with pytest.raises(HomeAssistantError) as exc:
+        await o.coordinator.async_send_lenke()
+    assert not isinstance(exc.value, ServiceValidationError)
+
+
+async def test_uten_publisert_side_finnes_ingen_lenke_og_oppgjoeret_sendes_uten(hass, oppsett):
+    o = oppsett
+    hass.config_entries.async_update_entry(o.entry, data={**o.entry.data, "publiser_side": False})
+    assert o.coordinator.side_url is None
+    await o.coordinator.async_refresh()  # 3. desember: lager og sender oppgjøret
+    tekst = o.epost.call_args.kwargs["melding"].get_body(("plain",)).get_content()
+    assert "testslug123" not in tekst and "310,00 kr" in tekst
+    assert o.coordinator.data["side_url"] is None
+
+
+# --- merk utestående som betalt -------------------------------------------------------
+
+
+async def test_merk_betalt_uten_periode_merker_alt_utestaaende(hass, oppsett):
+    o = oppsett
+    o.lager.finn("2026-09")["status"] = "unntak_ikke_betalt"  # også unntak regnes som utestående
+    merket = await o.coordinator.async_merk_betalt()
+    assert merket == ["2026-09", "2026-10"]
+    assert {p["status"] for p in o.lager.perioder} == {"betalt"}
+    assert o.coordinator.data["utestaaende"] == 0.0
+    assert "Betalt" in _side(o)
+
+
+async def test_merk_betalt_for_en_bestemt_periode_roerer_ikke_de_andre(hass, oppsett):
+    o = oppsett
+    o.lager.finn("2026-09")["status"] = "ikke_betalt"
+    assert await o.coordinator.async_merk_betalt("2026-10") == ["2026-10"]
+    assert o.lager.finn("2026-10")["status"] == "betalt"
+    assert o.lager.finn("2026-09")["status"] == "ikke_betalt"
+
+
+async def test_merk_betalt_roerer_ikke_oppgjor_som_venter_paa_godkjenning(hass, oppsett):
+    o = oppsett
+    o.lager.finn("2026-10")["status"] = "unntak_ikke_betalt"  # ellers er den auto-betalt 3. des.
+    sett_kilder(hass, maneder=[SEP_HUS, OKT_HUS, {**NOV_HUS, "snitt": 3.5}])
+    await o.coordinator.async_refresh()  # november havner i venter_godkjenning
+    await o.coordinator.async_merk_betalt()
+    assert o.lager.finn("2026-11")["status"] == "venter_godkjenning"
+    assert o.lager.finn("2026-10")["status"] == "betalt"
+
+
+async def test_merk_betalt_uten_noe_utestaaende_gir_valideringsfeil(hass, oppsett):
+    o = oppsett
+    await o.coordinator.async_merk_betalt()
+    with pytest.raises(ServiceValidationError):
+        await o.coordinator.async_merk_betalt()
+
+
+async def test_merk_betalt_for_periode_som_ikke_er_utestaaende_eller_finnes_ikke(hass, oppsett):
+    o = oppsett
+    with pytest.raises(ServiceValidationError):
+        await o.coordinator.async_merk_betalt("2026-09")  # allerede betalt
+    with pytest.raises(ServiceValidationError):
+        await o.coordinator.async_merk_betalt("2099-01")

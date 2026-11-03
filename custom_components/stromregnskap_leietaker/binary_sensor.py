@@ -22,8 +22,8 @@ async def async_setup_entry(
 class VenterGodkjenning(CoordinatorEntity[StromregnskapCoordinator], BinarySensorEntity):
     """On når minst én periode står i status «venter_godkjenning»."""
 
-    _attr_has_entity_name = False
-    _attr_name = "Leietaker oppgjør venter godkjenning"
+    _attr_has_entity_name = True
+    _attr_name = "Oppgjør venter godkjenning"
 
     def __init__(self, coordinator: StromregnskapCoordinator, entry_id: str) -> None:
         super().__init__(coordinator)
