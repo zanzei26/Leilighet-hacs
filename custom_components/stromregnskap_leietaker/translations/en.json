@@ -27,22 +27,24 @@
       },
       "kilder": {
         "title": "Data sources",
-        "description": "The integration does not calculate the house's electricity price itself. It reads ready-made figures from sensors you already have, and you choose which ones here.\n\n**Must be correct for settlements to be created:** the electricity accounts and the notification service. The apartment's usage is used for checking and for the “so far” figures.\n\n**Display and estimate only:** raw meter, power and forecast. The form requires a sensor for all of them, but these three do not affect the settlement itself.\n\nThe defaults match the original setup.",
+        "description": "The integration does not calculate the house's electricity price itself. It reads ready-made figures from sensors you already have, and you choose which ones here.\n\n**Must be correct for settlements to be created:** the electricity accounts (the house's figures), the meter (the apartment's usage) and the notification service. The utility_meter is used as a check.\n\n**Display and estimate only:** power and forecast. The form requires a sensor for both, but they do not affect the settlement itself.\n\nThe defaults match the original setup.",
         "data": {
           "ent_regnskap": "Electricity accounts (house monthly figures)",
           "ent_utility": "Apartment usage this month (utility_meter)",
           "ent_import": "Raw meter, accumulated kWh",
           "ent_effekt": "Instantaneous power (W)",
           "ent_prognose": "Usage forecast",
-          "varsel_tjeneste": "Notification service for the landlord (notify.name)"
+          "varsel_tjeneste": "Notification service for the landlord (notify.name)",
+          "maaler_start_stand": "Meter reading at the start of this month (kWh)"
         },
         "data_description": {
           "ent_regnskap": "The sensor with the house's electricity figures per month. It needs the attribute “maneder” (a list of closed months, each with mnd, kwh, kraft, nettleie, norgespris, sum and snitt, and preferably leilighet_kwh) and “denne_maneden” (the same fields for the current month). The house's average price is taken only from here.",
-          "ent_utility": "The apartment's usage so far this month in kWh, from a meter that resets every month (a utility_meter with a monthly cycle). The attribute “last_period” (last month's final value) is used to check the kWh in the settlement.",
-          "ent_import": "The apartment's raw, accumulated meter reading in kWh. Used for display only (as the attribute maaler_total_kwh) and does not affect the settlement.",
+          "ent_utility": "The apartment's usage so far this month in kWh, from a meter that resets every month (a utility_meter with a monthly cycle). Used as a check against the meter readings (the attribute “last_period” is last month's final value) and for the “so far” figures.",
+          "ent_import": "The apartment's meter reading in kWh, as the meter counts up by itself (it is never reset). This is the main source of usage: usage in a month is the meter reading at the month change minus the reading at the previous month change. The integration stores the reading at every month change.",
           "ent_effekt": "The apartment's instantaneous power in W. Used for display only (as the attribute effekt_w) and does not affect the settlement.",
           "ent_prognose": "The sensor that says how much usage is expected to change compared with last month, in percent. It needs the attribute “endring_prosent”. Used only for the monthly estimate (last month's kWh × (1 + percent/100)). Without it no estimate is shown.",
-          "varsel_tjeneste": "Where notifications to you as landlord are sent, for example when a settlement awaits approval or an email fails. Write the service as notify.name. You can find the names under Developer tools → Actions by searching for “notify”. The service must exist before you can continue."
+          "varsel_tjeneste": "Where notifications to you as landlord are sent, for example when a settlement awaits approval or an email fails. Write the service as notify.name. You can find the names under Developer tools → Actions by searching for “notify”. The service must exist before you can continue.",
+          "maaler_start_stand": "Used only the first time, if Home Assistant has no history for the meter reading from the start of this month. A new meter that started at 0 should be left at 0. Later month changes are read from the meter automatically."
         }
       },
       "epost": {
@@ -181,17 +183,19 @@
           "ent_import": "Raw meter, accumulated kWh",
           "ent_effekt": "Instantaneous power (W)",
           "ent_prognose": "Usage forecast",
-          "varsel_tjeneste": "Notification service for the landlord (notify.name)"
+          "varsel_tjeneste": "Notification service for the landlord (notify.name)",
+          "maaler_start_stand": "Meter reading at the start of this month (kWh)"
         },
         "data_description": {
           "ent_regnskap": "The sensor with the house's electricity figures per month. It needs the attribute “maneder” (a list of closed months, each with mnd, kwh, kraft, nettleie, norgespris, sum and snitt, and preferably leilighet_kwh) and “denne_maneden” (the same fields for the current month). The house's average price is taken only from here.",
-          "ent_utility": "The apartment's usage so far this month in kWh, from a meter that resets every month (a utility_meter with a monthly cycle). The attribute “last_period” (last month's final value) is used to check the kWh in the settlement.",
-          "ent_import": "The apartment's raw, accumulated meter reading in kWh. Used for display only (as the attribute maaler_total_kwh) and does not affect the settlement.",
+          "ent_utility": "The apartment's usage so far this month in kWh, from a meter that resets every month (a utility_meter with a monthly cycle). Used as a check against the meter readings (the attribute “last_period” is last month's final value) and for the “so far” figures.",
+          "ent_import": "The apartment's meter reading in kWh, as the meter counts up by itself (it is never reset). This is the main source of usage: usage in a month is the meter reading at the month change minus the reading at the previous month change. The integration stores the reading at every month change.",
           "ent_effekt": "The apartment's instantaneous power in W. Used for display only (as the attribute effekt_w) and does not affect the settlement.",
           "ent_prognose": "The sensor that says how much usage is expected to change compared with last month, in percent. It needs the attribute “endring_prosent”. Used only for the monthly estimate (last month's kWh × (1 + percent/100)). Without it no estimate is shown.",
-          "varsel_tjeneste": "Where notifications to you as landlord are sent, for example when a settlement awaits approval or an email fails. Write the service as notify.name. You can find the names under Developer tools → Actions by searching for “notify”. The service must exist before you can continue."
+          "varsel_tjeneste": "Where notifications to you as landlord are sent, for example when a settlement awaits approval or an email fails. Write the service as notify.name. You can find the names under Developer tools → Actions by searching for “notify”. The service must exist before you can continue.",
+          "maaler_start_stand": "Used only the first time, if Home Assistant has no history for the meter reading from the start of this month. A new meter that started at 0 should be left at 0. Later month changes are read from the meter automatically."
         },
-        "description": "The integration does not calculate the house's electricity price itself. It reads ready-made figures from sensors you already have, and you choose which ones here.\n\n**Must be correct for settlements to be created:** the electricity accounts and the notification service. The apartment's usage is used for checking and for the “so far” figures.\n\n**Display and estimate only:** raw meter, power and forecast. The form requires a sensor for all of them, but these three do not affect the settlement itself.\n\nThe defaults match the original setup."
+        "description": "The integration does not calculate the house's electricity price itself. It reads ready-made figures from sensors you already have, and you choose which ones here.\n\n**Must be correct for settlements to be created:** the electricity accounts (the house's figures), the meter (the apartment's usage) and the notification service. The utility_meter is used as a check.\n\n**Display and estimate only:** power and forecast. The form requires a sensor for both, but they do not affect the settlement itself.\n\nThe defaults match the original setup."
       },
       "epost": {
         "title": "Email (SMTP)",
@@ -289,6 +293,25 @@
           "handling_feilet": "Could not complete: {feil}"
         }
       }
+    },
+    "datagrunnlag": {
+      "title": "The data basis for the {maned} settlement has problems",
+      "description": "The month change is approaching, and this must be fixed before the settlement can be created safely: {problemer}"
+    },
+    "etterslep": {
+      "title": "The settlement for {maned} has not been created",
+      "description": "The automatic run is over without the settlement for {periode} being created. Use the repair to create it now, or run the “Generate settlement” action.",
+      "fix_flow": {
+        "step": {
+          "confirm": {
+            "title": "Create the settlement now",
+            "description": "Create and send the settlement for {periode} now?"
+          }
+        },
+        "abort": {
+          "handling_feilet": "Could not complete: {feil}"
+        }
+      }
     }
   },
   "services": {
@@ -377,6 +400,20 @@
         "periode": {
           "name": "Period",
           "description": "The month as YYYY-MM. Leave empty to mark everything outstanding as paid."
+        }
+      }
+    },
+    "sett_malerstand": {
+      "name": "Set meter reading",
+      "description": "Enters or corrects the meter reading at a month change. Use it if a reading is missing, for example because Home Assistant was down at midnight.",
+      "fields": {
+        "dato": {
+          "name": "Date",
+          "description": "The first day of the month, for example 2026-12-01 or 2026-12. The reading applies at midnight into that month."
+        },
+        "stand": {
+          "name": "Meter reading (kWh)",
+          "description": "What the meter showed at the month change."
         }
       }
     }

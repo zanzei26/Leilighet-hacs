@@ -87,28 +87,55 @@ def _norsk(tall: float, desimaler: int = 1) -> str:
     return f"{tall:.{desimaler}f}".replace(".", ",")
 
 
-def velg_leilighet_kwh(
-    maaned_kwh: float | None, last_period: float | None, toleranse: float = 0.5
-) -> KwhValg:
-    """Primært månedsverdien fra regnskapssensoren, ellers utility_meter.last_period.
+@dataclass(frozen=True)
+class MaalerForbruk:
+    """Forbruk regnet fra to målerstander. ``feil`` settes hvis målerstanden gikk bakover."""
 
-    Er begge til stede og avviker mer enn ``toleranse`` kWh, settes ``avvik``.
-    """
-    if maaned_kwh is None and last_period is None:
-        return KwhValg(None, "mangler")
-    if maaned_kwh is None:
-        return KwhValg(last_period, "utility_meter.last_period")
-    if last_period is not None and round(abs(maaned_kwh - last_period), 6) > toleranse:
-        avvik = (
-            "Leilighetens kWh avviker mellom kildene: "
-            f"regnskapssensoren {_norsk(maaned_kwh)} kWh, "
-            f"utility_meter (last_period) {_norsk(last_period)} kWh"
+    kwh: float | None
+    feil: str | None = None
+
+
+def maaler_forbruk(stand_start: float | None, stand_slutt: float | None) -> MaalerForbruk:
+    """Forbruk = målerstand ved slutten minus målerstand ved starten av perioden."""
+    if stand_start is None or stand_slutt is None:
+        return MaalerForbruk(None, None)
+    if stand_slutt < stand_start:
+        return MaalerForbruk(
+            None,
+            f"Målerstanden gikk bakover ({_norsk(stand_start)} → {_norsk(stand_slutt)} kWh). "
+            "Måleren kan være byttet eller nullstilt.",
         )
-        return KwhValg(maaned_kwh, "jarvis_stromregnskap.maneder", avvik)
-    kilde = "jarvis_stromregnskap.maneder"
-    if last_period is not None:
-        kilde += " + utility_meter.last_period"
-    return KwhValg(maaned_kwh, kilde)
+    return MaalerForbruk(avrund(_dec(stand_slutt) - _dec(stand_start), 3), None)
+
+
+def velg_leilighet_kwh(
+    maaned_kwh: float | None,
+    last_period: float | None,
+    toleranse: float = 0.5,
+    *,
+    maaler: float | None = None,
+) -> KwhValg:
+    """Velger leilighetens kWh. Prioritet: målerstander, regnskapssensoren, last_period.
+
+    Er flere kilder til stede og noen avviker mer enn ``toleranse`` kWh fra den valgte,
+    settes ``avvik`` med tallene fra alle kildene.
+    """
+    kilder = [
+        ("målerstander", "maalerstander", maaler),
+        ("regnskapssensoren", "jarvis_stromregnskap.maneder", maaned_kwh),
+        ("utility_meter (last_period)", "utility_meter.last_period", last_period),
+    ]
+    funnet = [k for k in kilder if k[2] is not None]
+    if not funnet:
+        return KwhValg(None, "mangler")
+    valgt = funnet[0][2]
+    kilde = " + ".join(k[1] for k in funnet)
+    if any(round(abs(valgt - v), 6) > toleranse for _, _, v in funnet[1:]):
+        avvik = "Leilighetens kWh avviker mellom kildene: " + ", ".join(
+            f"{navn} {_norsk(v)} kWh" for navn, _, v in funnet
+        )
+        return KwhValg(valgt, kilde, avvik)
+    return KwhValg(valgt, kilde)
 
 
 def sjekk_rimelighet(

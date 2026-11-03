@@ -110,6 +110,7 @@ CFG = {
     "kjoretid": "08:00:00",
     "siste_sjekkdag": 6,
     "importer_historikk": False,
+    "maaler_start_stand": 0.0,
 }
 
 # SYNTETISKE testtall for november (ikke ekte data).
@@ -176,3 +177,10 @@ def sett_kilder(
         "2941",
         {"endring_prosent": endring, "forrige_maned": 2402, "hittil": 268},
     )
+
+
+# Målerstand ved månedsskiftene (kWh): novembers forbruk blir 250,0 kWh.
+MAALERSTANDER = {
+    "2026-11-01": {"stand": 0.0, "kilde": "start", "tid": "2026-11-03T20:16:00+01:00"},
+    "2026-12-01": {"stand": 250.0, "kilde": "live", "tid": "2026-12-01T00:00:20+01:00"},
+}

@@ -29,6 +29,9 @@ SKJEMA_STATUS = vol.Schema(
 SKJEMA_SLETT = vol.Schema({**PERIODE_PAAKREVD, vol.Required("bekreft"): cv.boolean})
 SKJEMA_TOM = vol.Schema({})
 SKJEMA_VALGFRI_PERIODE = vol.Schema({vol.Optional("periode"): cv.string})
+SKJEMA_MALERSTAND = vol.Schema(
+    {vol.Required("dato"): cv.string, vol.Required("stand"): vol.Coerce(float)}
+)
 
 
 def _koordinator(hass: HomeAssistant) -> StromregnskapCoordinator:
@@ -77,6 +80,10 @@ async def _merk_betalt(call: ServiceCall) -> None:
     await _koordinator(call.hass).async_merk_betalt(call.data.get("periode"))
 
 
+async def _sett_malerstand(call: ServiceCall) -> None:
+    await _koordinator(call.hass).async_sett_malerstand(call.data["dato"], call.data["stand"])
+
+
 async def _send_lenke(call: ServiceCall) -> None:
     await _koordinator(call.hass).async_send_lenke()
 
@@ -105,3 +112,4 @@ def async_registrer_tjenester(hass: HomeAssistant) -> None:
     )
     reg(DOMAIN, "send_lenke", _send_lenke, SKJEMA_TOM)
     reg(DOMAIN, "merk_betalt", _merk_betalt, SKJEMA_VALGFRI_PERIODE)
+    reg(DOMAIN, "sett_malerstand", _sett_malerstand, SKJEMA_MALERSTAND)

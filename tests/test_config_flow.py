@@ -26,6 +26,7 @@ STEG_KILDER = {
     "ent_regnskap": "sensor.jarvis_stromregnskap",
     "ent_utility": "sensor.leilighet_strom_denne_maneden",
     "ent_import": "sensor.minusmaler_leilighet_import",
+    "maaler_start_stand": 0,
     "ent_effekt": "sensor.minusmaler_leilighet_effekt",
     "ent_prognose": "sensor.mal_forbruk_prognose",
     "varsel_tjeneste": "notify.varsle_magnar",
@@ -109,6 +110,7 @@ async def test_hele_flyten_lager_entry_med_alle_valg(hass, smtp):
     assert len(d["slug"]) == 24 and d["slug"] in lenke
     assert d["kjoretid"] == "08:00:00" and d["kjoredag"] == 3 and d["siste_sjekkdag"] == 6
     assert d["ent_prognose"] == "sensor.mal_forbruk_prognose"
+    assert d["maaler_start_stand"] == 0.0 and isinstance(d["maaler_start_stand"], float)
     assert isinstance(d["smtp_port"], int) and isinstance(d["kjoredag"], int)
 
 

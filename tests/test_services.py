@@ -32,6 +32,7 @@ async def test_alle_tjenester_er_registrert(hass, integrasjon):
         "ny_leietaker",
         "send_lenke",
         "merk_betalt",
+        "sett_malerstand",
     }
     assert forventet <= set(hass.services.async_services()[DOMAIN])
 
@@ -203,3 +204,17 @@ async def test_merk_betalt_tjenesten(hass, integrasjon):
 async def test_merk_betalt_tjenesten_med_periode(hass, integrasjon):
     await _kall(hass, "merk_betalt", {"periode": "2026-10"})
     assert _lager(integrasjon).finn("2026-10")["status"] == "betalt"
+
+
+async def test_sett_malerstand_tjenesten_lagrer_manuell_avlesning(hass, integrasjon):
+    await _kall(hass, "sett_malerstand", {"dato": "2026-12", "stand": 251.2})
+    rad = _lager(integrasjon).data["maalerstander"]["2026-12-01"]
+    assert rad["stand"] == 251.2 and rad["kilde"] == "manuell"
+    assert "251.2" in str(hass.states.get("binary_sensor.leietaker_datagrunnlag").attributes)
+
+
+async def test_sett_malerstand_tjenesten_avviser_ugyldig_dato_og_stand(hass, integrasjon):
+    with pytest.raises(ServiceValidationError):
+        await _kall(hass, "sett_malerstand", {"dato": "2026-12-15", "stand": 1})
+    with pytest.raises(vol.Invalid):
+        await _kall(hass, "sett_malerstand", {"dato": "2026-12-01"})  # stand mangler

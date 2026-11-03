@@ -38,21 +38,30 @@ from .const import (
     DOMAIN,
     OPPDATERINGSINTERVALL_TIMER,
 )
+from .datagrunnlag import DatagrunnlagMixin
 from .epost import EpostMixin
 from .filer import skriv_atomisk
 from .generering import GenereringMixin, ManglerData
 from .handlinger import HandlingerMixin
 from .kilder import Kilder, bygg_data
+from .maaler import MaalerMixin
 from .page import render_side
+from .snapshot import SnapshotMixin
 from .storage import Lager
 from .url import bygg_side_url
-from .varsler import ISSUE_MANGLER, Varsler
+from .varsler import ISSUE_ETTERSLEP, ISSUE_MANGLER, Varsler
 
 _LOGGER = logging.getLogger(__name__)
 
 
 class StromregnskapCoordinator(
-    GenereringMixin, EpostMixin, HandlingerMixin, DataUpdateCoordinator[dict[str, Any]]
+    GenereringMixin,
+    EpostMixin,
+    HandlingerMixin,
+    MaalerMixin,
+    SnapshotMixin,
+    DatagrunnlagMixin,
+    DataUpdateCoordinator[dict[str, Any]],
 ):
     """Oppdateres hver time. Lager oppgjør i kjørevinduet og holder siden à jour."""
 
@@ -124,6 +133,14 @@ class StromregnskapCoordinator(
     async def _async_update_data(self) -> dict[str, Any]:
         naa = dt_util.now()
         self._forsokt_na.clear()
+        try:
+            await self.async_fang_maalerstand(naa)
+        except Exception:  # noqa: BLE001 - skal ikke stoppe resten
+            _LOGGER.exception("Kunne ikke sikre målerstand for måneden")
+        try:
+            await self._ta_bilde(naa)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Kunne ikke ta øyeblikksbilde av kildetallene")
         await self._oppdater_status(naa)
         try:
             await self._prov_automatisk(naa)
@@ -134,6 +151,10 @@ class StromregnskapCoordinator(
             await self._send_ventende(naa)
         except Exception:  # noqa: BLE001
             _LOGGER.exception("Sending av ventende e-post feilet uventet")
+        try:
+            await self._varsle_datagrunnlag(naa)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Kunne ikke vurdere datagrunnlaget")
         return await self._publiser(naa)
 
     async def _oppdater_status(self, naa: datetime) -> None:
@@ -161,9 +182,13 @@ class StromregnskapCoordinator(
     async def _prov_automatisk(self, naa: datetime) -> None:
         periode_id = forrige_periode_id(naa.date())
         if self.lager.finn(periode_id):
+            self.varsler.fjern_issue(ISSUE_ETTERSLEP, periode_id)
             return
         start, slutt, varsel_tid = self._kjorevindu(naa)
-        if not start <= naa <= slutt:
+        if naa > slutt:
+            await self._varsle_etterslep(periode_id, naa)
+            return
+        if naa < start:
             return
         try:
             await self._generer(periode_id, tving=False, send_epost=True, naa=naa)
@@ -187,9 +212,17 @@ class StromregnskapCoordinator(
     # ------------------------------------------------------------------ data og side
 
     def _bygg_data(self, naa: datetime) -> dict[str, Any]:
-        return bygg_data(
+        data = bygg_data(
             self.kilder, self.cfg, self.lager.perioder, naa, self.side_url, self._side_publisert
         )
+        mnd = f"{naa.year}-{naa.month:02d}"
+        avlesninger = sorted(self.lager.data["maalerstander"].items())[-6:]
+        data["datagrunnlag"] = self.vurder_datagrunnlag(naa)
+        data["siste_bilde"] = (self.lager.data["snapshots"].get(mnd) or {}).get("tid")
+        data["siste_sikkerhetskopi"] = self.lager.siste_kopi
+        data["kopimappe"] = self.lager.kopimappe
+        data["maalerstander"] = {dato: rad["stand"] for dato, rad in avlesninger}
+        return data
 
     async def _skriv_side(self, naa: datetime, data: dict[str, Any] | None = None) -> None:
         if not self.cfg.get(CONF_PUBLISER_SIDE):

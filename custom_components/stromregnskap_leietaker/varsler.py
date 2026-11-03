@@ -19,7 +19,9 @@ _LOGGER = logging.getLogger(__name__)
 ISSUE_VENTER = "venter_godkjenning"
 ISSUE_MANGLER = "mangler_data"
 ISSUE_EPOST = "epost_feilet"
-ISSUE_ARTER = (ISSUE_VENTER, ISSUE_MANGLER, ISSUE_EPOST)
+ISSUE_DATAGRUNNLAG = "datagrunnlag"
+ISSUE_ETTERSLEP = "etterslep"
+ISSUE_ARTER = (ISSUE_VENTER, ISSUE_MANGLER, ISSUE_EPOST, ISSUE_DATAGRUNNLAG, ISSUE_ETTERSLEP)
 
 
 class Varsler:
@@ -53,6 +55,7 @@ class Varsler:
         if nokkel in self._lager.tilstand["varslet"]:
             return
         self._lager.tilstand["varslet"].append(nokkel)
+        del self._lager.tilstand["varslet"][:-300]  # listen skal ikke vokse for alltid
         await self._lager.async_lagre()
         await self.varsle(tittel, melding)
 
