@@ -45,6 +45,7 @@ from .handlinger import HandlingerMixin
 from .kilder import Kilder, bygg_data
 from .maaler import MaalerMixin
 from .page import render_side
+from .snapshot import SnapshotMixin
 from .storage import Lager
 from .url import bygg_side_url
 from .varsler import ISSUE_MANGLER, Varsler
@@ -57,6 +58,7 @@ class StromregnskapCoordinator(
     EpostMixin,
     HandlingerMixin,
     MaalerMixin,
+    SnapshotMixin,
     DataUpdateCoordinator[dict[str, Any]],
 ):
     """Oppdateres hver time. Lager oppgjør i kjørevinduet og holder siden à jour."""
@@ -133,6 +135,10 @@ class StromregnskapCoordinator(
             await self.async_fang_maalerstand(naa)
         except Exception:  # noqa: BLE001 - skal ikke stoppe resten
             _LOGGER.exception("Kunne ikke sikre målerstand for måneden")
+        try:
+            await self._ta_bilde(naa)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Kunne ikke ta øyeblikksbilde av kildetallene")
         await self._oppdater_status(naa)
         try:
             await self._prov_automatisk(naa)

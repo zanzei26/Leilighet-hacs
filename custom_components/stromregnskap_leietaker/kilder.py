@@ -31,6 +31,16 @@ def til_float(verdi: Any) -> float | None:
         return None
 
 
+KREVD_FRA_HUSET = ("kwh", "kraft", "nettleie", "norgespris", "sum", "snitt")
+
+
+def fullstendig(maned: Any) -> bool:
+    """Har månedstallene alt som trengs for å regne ut et oppgjør?"""
+    return isinstance(maned, dict) and all(
+        til_float(maned.get(k)) is not None for k in KREVD_FRA_HUSET
+    )
+
+
 class Kilder:
     """Leser fra sensorene som er valgt i oppsettet."""
 

@@ -19,12 +19,11 @@ from .calc import (
     velg_leilighet_kwh,
 )
 from .const import CONF_ENT_REGNSKAP, CONF_FORFALLSDAG
-from .kilder import til_float
+from .kilder import fullstendig, til_float
 from .page import fmt_tall
 from .varsler import ISSUE_MANGLER, ISSUE_VENTER
 
 PERIODE_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
-KREVD_FRA_HUSET = ("kwh", "kraft", "nettleie", "norgespris", "sum", "snitt")
 
 
 class ManglerData(ServiceValidationError):
@@ -78,10 +77,15 @@ class GenereringMixin:
                 "Slett den først hvis den skal lages på nytt."
             )
         maned = self.kilder.finn_maned(periode_id)
-        if maned is None or any(til_float(maned.get(k)) is None for k in KREVD_FRA_HUSET):
-            raise ManglerData(
-                f"{self.cfg[CONF_ENT_REGNSKAP]} har ikke komplette tall for {periode_id}."
-            )
+        fra_bilde: str | None = None
+        if not fullstendig(maned):
+            bilde = self.lager.data["snapshots"].get(periode_id)
+            if bilde and fullstendig(bilde.get("maned")):
+                maned, fra_bilde = bilde["maned"], bilde["tid"]
+            else:
+                raise ManglerData(
+                    f"{self.cfg[CONF_ENT_REGNSKAP]} har ikke komplette tall for {periode_id}."
+                )
         # last_period gjelder bare måneden før den løpende
         last_period = (
             self.kilder.last_period() if periode_id == forrige_periode_id(naa.date()) else None
@@ -99,10 +103,16 @@ class GenereringMixin:
             leilighet_kwh=valg.kwh,
             forfallsdag=int(self.cfg[CONF_FORFALLSDAG]),
             naa=naa,
-            kilde=valg.kilde,
+            kilde=valg.kilde + (" + snapshot" if fra_bilde else ""),
         )
         brudd: list[str] = []
         if not tving:
+            if fra_bilde:
+                brudd.append(
+                    f"Husets tall for {periode_id} mangler i regnskapssensoren og er hentet fra et "
+                    f"øyeblikksbilde tatt {fra_bilde[:16].replace('T', ' ')}. "
+                    "Kontroller mot fakturaen før godkjenning."
+                )
             if maaler.feil:
                 brudd.append(maaler.feil)
             elif maaler.kwh is None:
