@@ -13,6 +13,8 @@ from .calc import (
     STATUS_VENTER,
     avrund,
     beregn_oppgjor,
+    er_kopi_av_forrige,
+    forrige_maaned_id,
     forrige_periode,
     forrige_periode_id,
     leilighet_belop,
@@ -87,6 +89,19 @@ class GenereringMixin:
             )
         maned = self.kilder.finn_maned(periode_id)
         fra_bilde: str | None = None
+        forrige_id = forrige_maaned_id(periode_id)
+        if (
+            not tving
+            and fullstendig(maned)
+            and er_kopi_av_forrige(maned, self.lager.finn(forrige_id))
+        ):
+            # Ikke lagre noe: neste timekjøring prøver igjen, og er kilden fortsatt feil når
+            # vinduet er over, får utleier varsel om at data mangler.
+            raise ManglerData(
+                f"Husets tall for {periode_id} i {self.cfg[CONF_ENT_REGNSKAP]} er identiske med "
+                f"{forrige_id} (samme kWh og sum). Kilden har trolig ikke rullet over til den nye "
+                "måneden ennå. Oppgjøret lages ikke før tallene er endret."
+            )
         if not fullstendig(maned):
             bilde = self.lager.data["snapshots"].get(periode_id)
             if bilde and fullstendig(bilde.get("maned")):
