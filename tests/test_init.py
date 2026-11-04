@@ -18,7 +18,7 @@ async def _sett_opp(hass, tmp_path, freezer, **cfg):
     hass.config.external_url = "https://eksempel.ui.nabu.casa"
     freezer.move_to("2026-11-10 12:00:00+01:00")
     sett_kilder(hass, denne={"mnd": "2026-11", "snitt": 1.5, "leilighet_kr": 40.0}, utility="30.25")
-    async_mock_service(hass, "notify", "varsle_magnar")
+    async_mock_service(hass, "notify", "varsle_utleier")
     entry = MockConfigEntry(
         domain=DOMAIN, data={**CFG, "importer_historikk": True, **cfg}, entry_id="e1"
     )

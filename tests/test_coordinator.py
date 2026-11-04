@@ -300,7 +300,7 @@ async def test_generer_uten_data_gir_tjenestefeil(hass, oppsett):
 
 async def test_feil_i_varseltjenesten_stopper_ikke_oppgjoeret(hass, oppsett):
     o = oppsett
-    hass.services.async_remove("notify", "varsle_magnar")
+    hass.services.async_remove("notify", "varsle_utleier")
     await o.coordinator.async_refresh()
     assert o.lager.finn("2026-11")["epost_sendt"] is not None
 

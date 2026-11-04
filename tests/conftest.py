@@ -37,7 +37,7 @@ async def oppsett(hass, hass_storage, tmp_path, freezer):
         lager.legg_til(p)
     lager.data["maalerstander"] = deepcopy(MAALERSTANDER)
     sett_kilder(hass)
-    varsler = async_mock_service(hass, "notify", "varsle_magnar")
+    varsler = async_mock_service(hass, "notify", "varsle_utleier")
 
     with (
         patch("custom_components.stromregnskap_leietaker.epost.send_epost") as epost,
@@ -65,7 +65,7 @@ async def integrasjon(hass, hass_storage, tmp_path, freezer):
     hass.config.external_url = "https://eksempel.ui.nabu.casa"
     freezer.move_to("2026-11-10 12:00:00+01:00")
     sett_kilder(hass, denne={"mnd": "2026-11", "snitt": 1.5, "leilighet_kr": 40.0}, utility="30.25")
-    varsler = async_mock_service(hass, "notify", "varsle_magnar")
+    varsler = async_mock_service(hass, "notify", "varsle_utleier")
     assert await async_setup_component(hass, "http", {})
     tillat_ruter_etter_oppstart(hass)
 

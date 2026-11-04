@@ -524,8 +524,8 @@ def test_kildeskjemaet_husker_valgt_lader():
 async def test_validering_krever_laderens_teller_når_laderen_er_på(hass):
     from pytest_homeassistant_custom_component.common import async_mock_service
 
-    async_mock_service(hass, "notify", "varsle_magnar")
-    inn = {"varsel_tjeneste": "notify.varsle_magnar", "lader_aktiv": True}
+    async_mock_service(hass, "notify", "varsle_utleier")
+    inn = {"varsel_tjeneste": "notify.varsle_utleier", "lader_aktiv": True}
     assert valider_kilder(hass, inn) == {"ent_lader": "lader_mangler"}
     assert valider_kilder(hass, {**inn, "ent_lader": LADER}) == {}
     assert valider_kilder(hass, {**inn, "lader_aktiv": False}) == {}
@@ -539,7 +539,7 @@ async def test_valgflyten_slår_på_laderen(hass):
 
     from custom_components.stromregnskap_leietaker.const import DOMAIN
 
-    async_mock_service(hass, "notify", "varsle_magnar")
+    async_mock_service(hass, "notify", "varsle_utleier")
     entry = MockConfigEntry(domain=DOMAIN, data=dict(CFG), entry_id="e1")
     entry.add_to_hass(hass)
     skjema = {
