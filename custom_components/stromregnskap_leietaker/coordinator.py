@@ -44,6 +44,7 @@ from .const import (
     CONF_SNITT_MIN,
     CONF_UTLEIER_EPOST,
     CONF_UTLEIER_NAVN,
+    CONF_UTLEIER_TELEFON,
     DOMAIN,
     OPPDATERINGSINTERVALL_TIMER,
 )
@@ -126,6 +127,7 @@ class StromregnskapCoordinator(
             "navn": c[CONF_UTLEIER_NAVN],
             "epost": c[CONF_UTLEIER_EPOST],
             "kontonummer": c[CONF_KONTONUMMER],
+            "telefon": c.get(CONF_UTLEIER_TELEFON) or "",
         }
 
     @property

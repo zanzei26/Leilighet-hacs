@@ -11,6 +11,7 @@ CONF_ADRESSE = "adresse"
 CONF_INNFLYTTET = "innflyttet"
 CONF_UTLEIER_NAVN = "utleier_navn"
 CONF_UTLEIER_EPOST = "utleier_epost"
+CONF_UTLEIER_TELEFON = "utleier_telefon"
 CONF_KONTONUMMER = "kontonummer"
 CONF_FORFALLSDAG = "forfallsdag"
 

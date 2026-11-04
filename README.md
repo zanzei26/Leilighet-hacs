@@ -32,7 +32,7 @@ Custom integration for Home Assistant som regner ut leietakers månedlige strøm
 1. **Leietaker og utleier:** navn, e-post, adresse, innflyttingsdato, utleiers navn og e-post, kontonummer, forfallsdag (standard 15).
 2. **Datakilder:** de fem sensorene og varslingstjenesten. Her kan du også slå på **elbil-laderen** (valgfritt, av som standard) og velge laderens teller. Se «Elbil-lader (valgfritt)».
 3. **E-post (SMTP):** server (standard `smtp.gmail.com`), port (587), brukernavn, app-passord. Innloggingen testes før du kommer videre, og du kan la den sende en test-e-post til utleier. Kopi av hver e-post til utleier er på som standard, og det samme gjelder e-postkopien med PDF og sikkerhetskopi etter hvert oppgjør.
-4. **Leietakerside:** på/av. Lenken vises i skjemaet.
+4. **Leietakerside:** på/av, og et valgfritt telefonnummer til utleier. Er nummeret fylt ut, står det en kontaktlinje nederst på siden («Spørsmål: <utleiers navn>, <telefon>») med en lenke leietaker kan trykke på for å ringe. Tomt felt gir ingen kontaktlinje. Nummeret lagres bare i oppsettet ditt i Home Assistant. Lenken vises i skjemaet.
 5. **Rimelighetskontroll og kjøretid:** snittpris min 0,50 / maks 3,00 kr/kWh, maks ±60 % endring i kWh mot forrige periode, kjøring den 3. kl. 08:00 og sjekk til og med den 6.
 6. **Eksisterende historikk:** importerer september (30.08–30.09) og oktober 2026 slik de er fakturert.
 

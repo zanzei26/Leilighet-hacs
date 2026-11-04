@@ -253,6 +253,28 @@ async def test_valgflyt_side_viser_lenken_og_kan_skru_av_publisering(hass, smtp)
     assert entry.data["publiser_side"] is False
 
 
+async def test_valgflyt_side_lagrer_telefon_og_kan_tomme_den_igjen(hass, smtp):
+    entry = await _entry(hass)
+    assert "utleier_telefon" not in entry.data  # valgfritt, og ikke satt fra før
+
+    r = await hass.config_entries.options.async_init(entry.entry_id)
+    r = await hass.config_entries.options.async_configure(r["flow_id"], {"next_step_id": "side"})
+    r = await hass.config_entries.options.async_configure(
+        r["flow_id"], {"publiser_side": True, "utleier_telefon": "  +47 123 45 678 "}
+    )
+    assert entry.data["utleier_telefon"] == "+47 123 45 678"  # uten mellomrom i endene
+
+    r = await hass.config_entries.options.async_init(entry.entry_id)
+    r = await hass.config_entries.options.async_configure(r["flow_id"], {"next_step_id": "side"})
+    r = await hass.config_entries.options.async_configure(r["flow_id"], {"publiser_side": True})
+    assert entry.data["utleier_telefon"] == ""  # tomt felt betyr «fjern», ikke «behold»
+
+
+async def test_oppsett_uten_telefon_lagrer_ingen_telefon(hass, smtp):
+    entry = await _entry(hass)
+    assert not entry.data.get("utleier_telefon")
+
+
 # --- rekonfigurering --------------------------------------------------------------
 
 

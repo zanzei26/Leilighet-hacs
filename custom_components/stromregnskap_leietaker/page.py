@@ -238,6 +238,19 @@ def _utregning(siste: dict[str, Any] | None) -> str:
 </section>"""
 
 
+def _kontakt(ul: dict[str, Any]) -> str:
+    """Valgfri kontaktlinje: «Spørsmål: <utleier>, <telefon>», med ringbar lenke hvis det er siffer."""
+    telefon = str(ul.get("telefon") or "").strip()
+    if not telefon:
+        return ""
+    siffer = "".join(t for t in telefon if t in "0123456789")
+    visning = _e(telefon)
+    if siffer:
+        pluss = "+" if telefon.startswith("+") else ""
+        visning = f'<a href="tel:{pluss}{siffer}">{visning}</a>'
+    return f'<p class="liten">Spørsmål: {_e(ul["navn"])}, {visning}</p>\n'
+
+
 def render_side(ctx: dict[str, Any]) -> str:
     """Bygger hele HTML-siden fra kontekst-dicten (se tests/data.py for formen)."""
     lt = ctx["leietaker"]
@@ -291,7 +304,7 @@ Leieforhold fra {innflyttet}</p>
 {_hittil(ctx)}
 {_historikk(synlige, ubetalt, ctx.get("pdf_base"))}
 {_utregning(siste)}
-<p class="liten">Generert av Home Assistant {_tidspunkt(ctx["oppdatert"])}</p>
+{_kontakt(ul)}<p class="liten">Generert av Home Assistant {_tidspunkt(ctx["oppdatert"])}</p>
 </main>
 </body>
 </html>

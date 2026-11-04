@@ -485,6 +485,23 @@ async def test_uten_publisert_side_finnes_ingen_lenke_og_oppgjoeret_sendes_uten(
     assert o.coordinator.data["side_url"] is None
 
 
+# --- kontaktlinje på siden --------------------------------------------------------------
+
+
+async def test_telefonen_fra_oppsettet_vises_paa_siden_og_forsvinner_naar_den_tommes(hass, oppsett):
+    o = oppsett
+    await o.coordinator.async_refresh()
+    assert "Spørsmål" not in _side(o)  # ikke satt: ingen kontaktlinje
+    hass.config_entries.async_update_entry(
+        o.entry, data={**o.entry.data, "utleier_telefon": "+47 123 45 678"}
+    )
+    await o.coordinator.async_refresh()
+    assert "+47 123 45 678" in _side(o) and "tel:+4712345678" in _side(o)
+    hass.config_entries.async_update_entry(o.entry, data={**o.entry.data, "utleier_telefon": ""})
+    await o.coordinator.async_refresh()
+    assert "Spørsmål" not in _side(o)
+
+
 # --- merk utestående som betalt -------------------------------------------------------
 
 

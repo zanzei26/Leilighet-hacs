@@ -52,6 +52,7 @@ from .const import (
     CONF_SNITT_MIN,
     CONF_UTLEIER_EPOST,
     CONF_UTLEIER_NAVN,
+    CONF_UTLEIER_TELEFON,
     CONF_VARSEL_TJENESTE,
     DEFAULT_ENDRING_MAKS,
     DEFAULT_ENT_EFFEKT,
@@ -179,11 +180,17 @@ def schema_epost(d: dict[str, Any], *, passord_valgfritt: bool) -> vol.Schema:
 
 
 def schema_side(d: dict[str, Any]) -> vol.Schema:
+    telefon_nokkel = (
+        vol.Optional(CONF_UTLEIER_TELEFON, description={"suggested_value": d[CONF_UTLEIER_TELEFON]})
+        if d.get(CONF_UTLEIER_TELEFON)
+        else vol.Optional(CONF_UTLEIER_TELEFON)
+    )
     return vol.Schema(
         {
             vol.Required(
                 CONF_PUBLISER_SIDE, default=d.get(CONF_PUBLISER_SIDE, True)
-            ): BooleanSelector()
+            ): BooleanSelector(),
+            telefon_nokkel: _tekst(),
         }
     )
 
@@ -247,6 +254,8 @@ def valider_grenser(inn: dict[str, Any]) -> dict[str, str]:
 def normaliser(inn: dict[str, Any]) -> dict[str, Any]:
     """NumberSelector gir float; heltallsfelt lagres som int, og test-valget lagres ikke."""
     ut = {k: v for k, v in inn.items() if k != CONF_SEND_TEST}
+    if CONF_UTLEIER_TELEFON in ut:
+        ut[CONF_UTLEIER_TELEFON] = str(ut[CONF_UTLEIER_TELEFON] or "").strip()
     for felt in (CONF_FORFALLSDAG, CONF_SMTP_PORT, CONF_KJOREDAG, CONF_SISTE_SJEKKDAG):
         if felt in ut:
             ut[felt] = int(ut[felt])

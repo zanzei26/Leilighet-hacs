@@ -77,10 +77,12 @@
         "title": "Tenant page",
         "description": "The tenant gets a permanent link to an ordinary web page showing the outstanding amount, usage so far this month and history. The page needs no login, and the link has a secret random part so it cannot be guessed. It is the same link as in the email. If Nabu Casa is on, that address is used, otherwise the external URL.\n\nLink: {lenke}",
         "data": {
-          "publiser_side": "Publish the tenant page"
+          "publiser_side": "Publish the tenant page",
+          "utleier_telefon": "Landlord phone (optional)"
         },
         "data_description": {
-          "publiser_side": "If you turn this off no page is created and the link stops working. Emails are then sent without a link."
+          "publiser_side": "If you turn this off no page is created and the link stops working. Emails are then sent without a link.",
+          "utleier_telefon": "Shown as a contact line at the bottom of the tenant page (“Questions: <your name>, <phone>”) with a link the tenant can tap to call. Leave empty for no contact line. The number is stored only in your own Home Assistant setup."
         }
       },
       "grenser": {
@@ -234,10 +236,12 @@
         "title": "Tenant page",
         "description": "The tenant gets a permanent link to an ordinary web page showing the outstanding amount, usage so far this month and history. The page needs no login, and the link has a secret random part so it cannot be guessed. It is the same link as in the email. If Nabu Casa is on, that address is used, otherwise the external URL.\n\nLink: {lenke}",
         "data": {
-          "publiser_side": "Publish the tenant page"
+          "publiser_side": "Publish the tenant page",
+          "utleier_telefon": "Landlord phone (optional)"
         },
         "data_description": {
-          "publiser_side": "If you turn this off no page is created and the link stops working. Emails are then sent without a link."
+          "publiser_side": "If you turn this off no page is created and the link stops working. Emails are then sent without a link.",
+          "utleier_telefon": "Shown as a contact line at the bottom of the tenant page (“Questions: <your name>, <phone>”) with a link the tenant can tap to call. Leave empty for no contact line. The number is stored only in your own Home Assistant setup."
         }
       },
       "grenser": {
