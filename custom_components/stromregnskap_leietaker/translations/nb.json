@@ -77,10 +77,12 @@
         "title": "Leietakerside",
         "description": "Leietaker får en fast lenke til en vanlig nettside som viser utestående beløp, forbruk hittil denne måneden og historikk. Siden krever ikke innlogging, og lenken har en hemmelig, tilfeldig del, så den kan ikke gjettes. Det er samme lenke som står i e-posten. Er Nabu Casa slått på, brukes den adressen, ellers ekstern URL.\n\nLenke: {lenke}",
         "data": {
-          "publiser_side": "Publiser leietakersiden"
+          "publiser_side": "Publiser leietakersiden",
+          "utleier_telefon": "Telefon til utleier (valgfritt)"
         },
         "data_description": {
-          "publiser_side": "Slår du av, lages ingen side og lenken slutter å virke. E-postene sendes da uten lenke."
+          "publiser_side": "Slår du av, lages ingen side og lenken slutter å virke. E-postene sendes da uten lenke.",
+          "utleier_telefon": "Vises som en kontaktlinje nederst på leietakersiden («Spørsmål: <ditt navn>, <telefon>») med en lenke leietaker kan trykke på for å ringe. La feltet stå tomt for ingen kontaktlinje. Nummeret lagres bare i oppsettet ditt i Home Assistant."
         }
       },
       "grenser": {
@@ -234,10 +236,12 @@
         "title": "Leietakerside",
         "description": "Leietaker får en fast lenke til en vanlig nettside som viser utestående beløp, forbruk hittil denne måneden og historikk. Siden krever ikke innlogging, og lenken har en hemmelig, tilfeldig del, så den kan ikke gjettes. Det er samme lenke som står i e-posten. Er Nabu Casa slått på, brukes den adressen, ellers ekstern URL.\n\nLenke: {lenke}",
         "data": {
-          "publiser_side": "Publiser leietakersiden"
+          "publiser_side": "Publiser leietakersiden",
+          "utleier_telefon": "Telefon til utleier (valgfritt)"
         },
         "data_description": {
-          "publiser_side": "Slår du av, lages ingen side og lenken slutter å virke. E-postene sendes da uten lenke."
+          "publiser_side": "Slår du av, lages ingen side og lenken slutter å virke. E-postene sendes da uten lenke.",
+          "utleier_telefon": "Vises som en kontaktlinje nederst på leietakersiden («Spørsmål: <ditt navn>, <telefon>») med en lenke leietaker kan trykke på for å ringe. La feltet stå tomt for ingen kontaktlinje. Nummeret lagres bare i oppsettet ditt i Home Assistant."
         }
       },
       "grenser": {

@@ -9,7 +9,7 @@ from custom_components.stromregnskap_leietaker.page import (
     render_side,
 )
 
-from .data import LEIETAKER, OKT, perioder, side_ctx
+from .data import LEIETAKER, OKT, UTLEIER, perioder, side_ctx
 
 
 def test_tall_bruker_komma_og_mellomrom_som_tusenskille():
@@ -189,3 +189,39 @@ def test_pdf_lenker_finnes_ikke_for_perioder_som_venter_paa_godkjenning():
 def test_siden_er_fortsatt_uten_javascript_og_eksterne_lenker_med_pdf_knapper():
     html = render_side(side_ctx(pdf_base="/stromregnskap/abc"))
     assert "<script" not in html and 'href="http' not in html and 'src="http' not in html
+
+
+# --- kontaktlinje (valgfri) ---------------------------------------------------------------
+
+KONTAKT = {**UTLEIER, "telefon": "+47 123 45 678"}
+
+
+def test_kontaktlinjen_viser_utleier_og_telefon_som_ringbar_lenke():
+    html = render_side(side_ctx(utleier=KONTAKT))
+    assert "Spørsmål" in html and "Ola Utleier" in html
+    assert "+47 123 45 678" in html
+    assert 'href="tel:+4712345678"' in html
+
+
+def test_uten_telefon_er_det_ingen_kontaktlinje():
+    assert "Spørsmål" not in render_side(side_ctx())
+    assert "Spørsmål" not in render_side(side_ctx(utleier={**UTLEIER, "telefon": ""}))
+    assert "Spørsmål" not in render_side(side_ctx(utleier={**UTLEIER, "telefon": None}))
+    assert "tel:" not in render_side(side_ctx(utleier={**UTLEIER, "telefon": "  "}))
+
+
+def test_telefonlenken_inneholder_bare_siffer_og_pluss_og_teksten_blir_escapet():
+    html = render_side(side_ctx(utleier={**UTLEIER, "telefon": '"><script>1</script> 12 34'}))
+    assert "<script>1</script>" not in html
+    assert 'href="tel:11234"' in html  # bare sifrene og +, ingenting annet
+    assert "&lt;script&gt;" in html
+
+
+def test_telefon_uten_siffer_vises_som_tekst_uten_lenke():
+    html = render_side(side_ctx(utleier={**UTLEIER, "telefon": "ring meg"}))
+    assert "ring meg" in html and "tel:" not in html
+
+
+def test_kontaktlinjen_staar_foer_generert_av():
+    html = render_side(side_ctx(utleier=KONTAKT))
+    assert html.index("Spørsmål") < html.index("Generert av Home Assistant")

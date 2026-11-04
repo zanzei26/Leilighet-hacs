@@ -23,6 +23,7 @@ from .const import (
     CONF_SMTP_PORT,
     CONF_UTLEIER_EPOST,
     CONF_UTLEIER_NAVN,
+    CONF_UTLEIER_TELEFON,
     DOMAIN,
     SLUG_LENGDE_BYTES,
 )
@@ -244,7 +245,9 @@ class StromregnskapOptionsFlow(OptionsFlow):
 
     async def async_step_side(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         if user_input is not None:
-            return self._lagre(normaliser(user_input))
+            # et tomt valgfritt felt kommer ikke med i skjemaet: det betyr «fjern», ikke «behold»
+            nye = {CONF_UTLEIER_TELEFON: ""} | normaliser(user_input)
+            return self._lagre(nye)
         slug = self.config_entry.data[CONF_SLUG]
         return self.async_show_form(
             step_id="side",
