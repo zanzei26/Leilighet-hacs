@@ -76,6 +76,29 @@ def forfall_for_periode(periode_id: str, forfallsdag: int) -> date:
     return date(na, nm, forfallsdag)
 
 
+def forrige_maaned_id(periode_id: str) -> str:
+    """Måneden før en periode: «2026-11» gir «2026-10»."""
+    aar, mnd = _mnd(periode_id)
+    return f"{aar - 1}-12" if mnd == 1 else f"{aar}-{mnd - 1:02d}"
+
+
+def er_kopi_av_forrige(maned: dict[str, Any], forrige: dict[str, Any] | None) -> bool:
+    """Er husets tall for måneden identiske med måneden før (kWh og sum, til to desimaler)?
+
+    I praksis skjer det aldri to måneder på rad. Det betyr at kilden ikke har rullet over til den
+    nye måneden ennå (eller har stoppet), og at et oppgjør bygd på tallene ville fått forrige
+    måneds snittpris, uten at noen av de vanlige kontrollene slår ut.
+    """
+    if not forrige:
+        return False
+    try:
+        return avrund(float(maned["kwh"]), 2) == avrund(float(forrige["hus_kwh"]), 2) and (
+            avrund(float(maned["sum"]), 2) == avrund(float(forrige["sum"]), 2)
+        )
+    except (KeyError, TypeError, ValueError):
+        return False
+
+
 def forrige_periode_id(idag: date) -> str:
     """Perioden (YYYY-MM) som tilsvarer forrige kalendermåned."""
     if idag.month == 1:
