@@ -19,7 +19,7 @@ Custom integration for Home Assistant som regner ut leietakers månedlige strøm
 | `sensor.minusmaler_leilighet_import` | Leilighetens målerstand i kWh (teller opp, nullstilles aldri). **Hovedkilden til forbruket.** |
 | `sensor.minusmaler_leilighet_effekt` | Øyeblikkseffekt (W), kun til visning. |
 | `sensor.mal_forbruk_prognose` | Attributtet `endring_prosent` brukes til månedsestimatet. |
-| `notify.varsle_magnar` | Varslingstjeneste til utleier (en tjeneste, ikke en entitet). |
+| `notify.notify` | Varslingstjeneste til utleier (en tjeneste, ikke en entitet). Dette er bare forslaget i skjemaet. Velg din egen. |
 
 ## Installasjon
 

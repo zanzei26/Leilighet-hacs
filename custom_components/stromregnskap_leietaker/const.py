@@ -51,7 +51,7 @@ DEFAULT_ENT_IMPORT = "sensor.minusmaler_leilighet_import"
 DEFAULT_MAALER_START_STAND = 0.0
 DEFAULT_ENT_EFFEKT = "sensor.minusmaler_leilighet_effekt"
 DEFAULT_ENT_PROGNOSE = "sensor.mal_forbruk_prognose"
-DEFAULT_VARSEL_TJENESTE = "notify.varsle_magnar"
+DEFAULT_VARSEL_TJENESTE = "notify.notify"
 
 DEFAULT_SMTP_HOST = "smtp.gmail.com"
 DEFAULT_SMTP_PORT = 587

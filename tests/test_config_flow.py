@@ -29,7 +29,7 @@ STEG_KILDER = {
     "maaler_start_stand": 0,
     "ent_effekt": "sensor.minusmaler_leilighet_effekt",
     "ent_prognose": "sensor.mal_forbruk_prognose",
-    "varsel_tjeneste": "notify.varsle_magnar",
+    "varsel_tjeneste": "notify.varsle_utleier",
 }
 STEG_EPOST = {
     "smtp_host": "smtp.gmail.com",
@@ -52,7 +52,7 @@ STEG_GRENSER = {
 
 @pytest.fixture(autouse=True)
 def varseltjeneste(hass):
-    async_mock_service(hass, "notify", "varsle_magnar")
+    async_mock_service(hass, "notify", "varsle_utleier")
 
 
 @pytest.fixture

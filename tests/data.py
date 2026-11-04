@@ -95,7 +95,7 @@ CFG = {
     "ent_import": "sensor.minusmaler_leilighet_import",
     "ent_effekt": "sensor.minusmaler_leilighet_effekt",
     "ent_prognose": "sensor.mal_forbruk_prognose",
-    "varsel_tjeneste": "notify.varsle_magnar",
+    "varsel_tjeneste": "notify.varsle_utleier",
     "smtp_host": "smtp.gmail.com",
     "smtp_port": 587,
     "smtp_bruker": "ola@example.com",
