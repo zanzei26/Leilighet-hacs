@@ -205,7 +205,11 @@ class StromregnskapCoordinator(
         if naa < start:
             return
         try:
-            await self._generer(periode_id, tving=False, send_epost=True, naa=naa)
+            # Øyeblikksbildet er siste utvei: vent til varseltidspunktet på siste sjekkdag, så
+            # malen/Amperium får hele vinduet til å rulle over og oppgjøret blir et vanlig ett.
+            await self._generer(
+                periode_id, tving=False, send_epost=True, naa=naa, reserve_fra=varsel_tid
+            )
         except ManglerData as err:
             _LOGGER.debug("Oppgjør for %s ikke klart: %s", periode_id, err)
             if naa >= varsel_tid:

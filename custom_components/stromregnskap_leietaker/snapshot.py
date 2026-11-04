@@ -1,7 +1,8 @@
 """Øyeblikksbilder av kildetallene gjennom måneden, som reserve for regnskapssensoren.
 
 Skulle regnskapssensoren miste en måned før oppgjøret lages den 3., finnes de siste tallene vi så
-i egen lagring. Oppgjør som bygger på et øyeblikksbilde sendes aldri automatisk, men venter alltid
+i egen lagring. Den automatiske kjøringen bruker bildet først fra varseltidspunktet på siste
+sjekkdag, og et oppgjør som bygger på et øyeblikksbilde sendes aldri automatisk, men venter alltid
 på godkjenning.
 """
 
