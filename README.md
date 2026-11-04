@@ -82,6 +82,8 @@ Alt er ferdig utregnet, med utregningen synlig, slik at både du og leietaker ka
 - **Fakturagrunnlag per måned** (én side): parter, periode, målerstand ved start og slutt, ditt forbruk, husets kostnader (kraft, nettleie, Norgespris, sum, husets forbruk og snittpris), utregningen `kWh × snittpris = beløp`, betalingsinformasjon og status.
 - **Hele regnskapet fra start**: sammendrag (totalt fakturert, betalt, utestående), alle oppgjør, og husets kostnader per måned. Lange regnskap fortsetter på flere sider med overskriften gjentatt.
 - **Leietaker** har knapper på siden sin: «Last ned PDF» under hver måned, og «Last ned hele regnskapet (PDF)». PDF-ene bygges ferskt ved hver nedlasting, krever ingen innlogging (som siden, bak den hemmelige lenken), og oppgjør som venter på godkjenning er ikke med.
+- **Leietaker** får regningen for perioden **vedlagt som PDF** i oppgjørs-e-posten. Skulle PDF-en ikke kunne lages, sendes oppgjøret likevel uten vedlegg (teksten lover da ikke noe vedlegg), og du får et varsel.
+- Med handlingen `send_faktura` kan du sende leietaker lenken til siden og regningen for en bestemt periode (standard: siste oppgjør) som PDF-vedlegg, for eksempel for å sende en regning på nytt med fersk lenke etter at leietakers e-postadresse er byttet. E-posten forteller også at hele regnskapet ligger på siden og at forbruket for inneværende måned er live.
 - **Utleier** får en **kopi på e-post** etter hvert oppgjør (kan slås av under Konfigurer → E-post). Emnet er «Fakturagrunnlag strøm leilighet – <måned år>». Vedlagt er fakturagrunnlaget, hele regnskapet og en **JSON-sikkerhetskopi** av alle data. Det er en kopi utenfor Home Assistant som ikke forsvinner. Du kan også trykke «Send regnskap» (eller bruke handlingen `send_regnskap`) når som helst.
 - Lenkene til PDF-ene står som attributter på `sensor.leietaker_lenke`.
 
@@ -126,6 +128,7 @@ Estimatet er forrige periodes leilighets-kWh × (1 + `endring_prosent`/100), pri
 | `stromregnskap_leietaker.godkjenn_oppgjor` | `periode` | Sender et oppgjør som venter på godkjenning. |
 | `stromregnskap_leietaker.send_epost_pa_nytt` | `periode` | Sender oppgjøret på e-post på nytt. |
 | `stromregnskap_leietaker.send_lenke` | | Sender en kort e-post til leietaker med lenken til siden. |
+| `stromregnskap_leietaker.send_faktura` | `periode` (valgfri) | Sender leietaker lenken til siden og regningen for perioden (siste oppgjør hvis ingen er valgt) som PDF-vedlegg. Endrer ikke perioden. |
 | `stromregnskap_leietaker.send_regnskap` | `periode` (valgfri) | Sender deg en e-post med fakturagrunnlag (siste periode hvis ingen er valgt), hele regnskapet og JSON-sikkerhetskopi. |
 | `stromregnskap_leietaker.merk_betalt` | `periode` (valgfri) | Merker utestående oppgjør som betalt. Uten periode: alle utestående. |
 | `stromregnskap_leietaker.sett_malerstand` | `dato` (første dag i måneden), `stand` (kWh), `maaler` (`leilighet`, standard, eller `lader`) | Legger inn eller retter målerstanden ved et månedsskifte. |

@@ -444,6 +444,16 @@
           "description": "The month as YYYY-MM. Leave empty for the latest settlement."
         }
       }
+    },
+    "send_faktura": {
+      "name": "Send invoice to tenant",
+      "description": "Sends the tenant an email with the link to the tenant page and the invoice for a period attached as a PDF. Without a period the latest settlement is used. Use it to resend an invoice with a fresh link, for example after the tenant's email address was changed.",
+      "fields": {
+        "periode": {
+          "name": "Period",
+          "description": "The month as YYYY-MM. Leave empty for the latest settlement."
+        }
+      }
     }
   }
 }

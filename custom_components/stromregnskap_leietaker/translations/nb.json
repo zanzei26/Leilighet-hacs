@@ -444,6 +444,16 @@
           "description": "Måneden som ÅÅÅÅ-MM. La stå tomt for siste oppgjør."
         }
       }
+    },
+    "send_faktura": {
+      "name": "Send regning til leietaker",
+      "description": "Sender leietaker en e-post med lenken til leietakersiden og regningen for en periode som PDF-vedlegg. Uten periode brukes siste oppgjør. Bruk den for å sende en regning på nytt med fersk lenke, for eksempel etter at leietakers e-postadresse er byttet.",
+      "fields": {
+        "periode": {
+          "name": "Periode",
+          "description": "Måneden som ÅÅÅÅ-MM. La stå tomt for siste oppgjør."
+        }
+      }
     }
   }
 }

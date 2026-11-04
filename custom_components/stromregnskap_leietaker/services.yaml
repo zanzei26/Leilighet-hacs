@@ -108,3 +108,11 @@ send_regnskap:
       example: "2026-10"
       selector:
         text:
+
+send_faktura:
+  fields:
+    periode:
+      required: false
+      example: "2026-10"
+      selector:
+        text:

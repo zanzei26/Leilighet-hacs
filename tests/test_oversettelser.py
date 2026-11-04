@@ -54,6 +54,7 @@ TJENESTER = {
     "merk_betalt": {"periode"},
     "sett_malerstand": {"dato", "stand", "maaler"},
     "send_regnskap": {"periode"},
+    "send_faktura": {"periode"},
 }
 
 

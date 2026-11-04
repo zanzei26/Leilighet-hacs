@@ -41,6 +41,13 @@ def _gate(adresse: str) -> str:
     return adresse.split(",")[0].strip()
 
 
+def _legg_ved(msg: EmailMessage, vedlegg: list[tuple[str, str, bytes]]) -> None:
+    """Legger vedlegg på som (filnavn, mimetype, innhold)."""
+    for navn, mimetype, innhold in vedlegg:
+        hovedtype, _, undertype = mimetype.partition("/")
+        msg.add_attachment(innhold, maintype=hovedtype, subtype=undertype, filename=navn)
+
+
 def bygg_epost(
     *,
     periode: dict[str, Any],
@@ -48,8 +55,9 @@ def bygg_epost(
     utleier: dict[str, Any],
     side_url: str | None,
     cc_utleier: bool = True,
+    vedlegg: list[tuple[str, str, bytes]] | None = None,
 ) -> EmailMessage:
-    """Bygger månedsoppgjøret som flerdelt e-post (ren tekst + HTML)."""
+    """Bygger månedsoppgjøret som flerdelt e-post (ren tekst + HTML), evt. med regningen vedlagt."""
     maaned = maaned_tekst(periode["id"])
     fornavn = _fornavn(leietaker["navn"])
     kwh = f"{fmt_kwh(periode['leilighet_kwh'])} kWh"
@@ -76,6 +84,10 @@ def bygg_epost(
             + rad.format("Beløp elbil-lader", escape(b_lader))
         )
 
+    vedlagt = "Regningen er vedlagt som PDF."
+    vedlagt_tekst = f"{vedlagt}\n\n" if vedlegg else ""
+    vedlagt_html = f"<p>{vedlagt}</p>\n" if vedlegg else ""
+
     forklaring = (
         "Beløpet er ditt målte forbruk multiplisert med husets faktiske snittpris for måneden."
     )
@@ -101,7 +113,7 @@ Forfall: {forfall}
 
 Betal til kontonummer {konto} og merk betalingen «{merking}».
 
-{avsnitt_tekst}
+{vedlagt_tekst}{avsnitt_tekst}
 Hilsen
 {utleier["navn"]}
 """
@@ -118,7 +130,7 @@ Hilsen
 <tr><td style="padding:2px 16px 2px 0;color:#5c6670">Forfall</td><td><strong>{e(forfall)}</strong></td></tr>
 </table>
 <p>Betal til kontonummer <strong>{e(konto)}</strong> og merk betalingen «{e(merking)}».</p>
-{avsnitt_html}
+{vedlagt_html}{avsnitt_html}
 <p>Hilsen<br>{e(utleier["navn"])}</p>
 </body></html>
 """
@@ -131,6 +143,80 @@ Hilsen
         msg["Cc"] = _adresse(utleier["navn"], utleier["epost"])
     msg.set_content(tekst)
     msg.add_alternative(html, subtype="html")
+    if vedlegg:
+        _legg_ved(msg, vedlegg)
+    return msg
+
+
+def bygg_fakturapost(
+    *,
+    periode: dict[str, Any],
+    leietaker: dict[str, Any],
+    utleier: dict[str, Any],
+    side_url: str,
+    vedlegg: list[tuple[str, str, bytes]],
+    cc_utleier: bool = True,
+) -> EmailMessage:
+    """E-post med lenken til leietakersiden og regningen for en periode som PDF-vedlegg."""
+    maaned = maaned_tekst(periode["id"])
+    fornavn = _fornavn(leietaker["navn"])
+    belop = f"{fmt_tall(periode['belop'], 2)} kr"
+    forfall = fmt_dato(periode["forfall"])
+    merking = f"Strøm – {maaned}"
+    konto = utleier["kontonummer"]
+    vedlagt = f"Regningen for {maaned} er vedlagt som PDF."
+    regnskap = (
+        "Hele regnskapet er løpende tilgjengelig på siden, og du kan laste det ned som PDF hvis "
+        "du ønsker det. Forbruket for inneværende måned er live på siden, så du kan følge med "
+        "på det hvis du vil."
+    )
+    advarsel = "Lenken er personlig. Ikke del den med andre. Legg den gjerne som bokmerke."
+    tekst = f"""Hei {fornavn},
+
+Her er ny lenke til den oppdaterte siden din med betalingsinformasjon:
+
+{side_url}
+
+{vedlagt}
+
+Beløp å betale: {belop}
+Forfall: {forfall}
+
+Betal til kontonummer {konto} og merk betalingen «{merking}».
+
+{regnskap}
+
+{advarsel}
+
+Hilsen
+{utleier["navn"]}
+"""
+    e = escape
+    html = f"""<!doctype html>
+<html lang="nb"><body style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;line-height:1.5;color:#1b1f24">
+<p>Hei {e(fornavn)},</p>
+<p>Her er ny lenke til den oppdaterte siden din med betalingsinformasjon:</p>
+<p><a href="{e(side_url, quote=True)}">{e(side_url)}</a></p>
+<p>{e(vedlagt)}</p>
+<table style="border-collapse:collapse">
+<tr><td style="padding:2px 16px 2px 0;color:#5c6670">Beløp å betale</td><td><strong>{e(belop)}</strong></td></tr>
+<tr><td style="padding:2px 16px 2px 0;color:#5c6670">Forfall</td><td><strong>{e(forfall)}</strong></td></tr>
+</table>
+<p>Betal til kontonummer <strong>{e(konto)}</strong> og merk betalingen «{e(merking)}».</p>
+<p>{e(regnskap)}</p>
+<p>{e(advarsel)}</p>
+<p>Hilsen<br>{e(utleier["navn"])}</p>
+</body></html>
+"""
+    msg = EmailMessage()
+    msg["Subject"] = f"Strømregning {maaned} – {_gate(leietaker['adresse'])}"
+    msg["From"] = _adresse(utleier["navn"], utleier["epost"])
+    msg["To"] = _adresse(leietaker["navn"], leietaker["epost"])
+    if cc_utleier:
+        msg["Cc"] = _adresse(utleier["navn"], utleier["epost"])
+    msg.set_content(tekst)
+    msg.add_alternative(html, subtype="html")
+    _legg_ved(msg, vedlegg)
     return msg
 
 
@@ -224,9 +310,7 @@ Ta vare på denne e-posten. Den er en kopi som ligger utenfor Home Assistant.
     msg["From"] = _adresse(utleier["navn"], utleier["epost"])
     msg["To"] = _adresse(utleier["navn"], utleier["epost"])
     msg.set_content(tekst)
-    for navn, mimetype, innhold in vedlegg:
-        hovedtype, _, undertype = mimetype.partition("/")
-        msg.add_attachment(innhold, maintype=hovedtype, subtype=undertype, filename=navn)
+    _legg_ved(msg, vedlegg)
     return msg
 
 
