@@ -34,6 +34,7 @@ async def test_alle_tjenester_er_registrert(hass, integrasjon):
         "merk_betalt",
         "sett_malerstand",
         "send_regnskap",
+        "send_faktura",
     }
     assert forventet <= set(hass.services.async_services()[DOMAIN])
 

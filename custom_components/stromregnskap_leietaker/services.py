@@ -98,6 +98,10 @@ async def _send_lenke(call: ServiceCall) -> None:
     await _koordinator(call.hass).async_send_lenke()
 
 
+async def _send_faktura(call: ServiceCall) -> None:
+    await _koordinator(call.hass).async_send_faktura(call.data.get("periode"))
+
+
 def async_registrer_tjenester(hass: HomeAssistant) -> None:
     """Registreres én gang i async_setup, uavhengig av om entry'en er lastet."""
     reg = hass.services.async_register
@@ -124,3 +128,4 @@ def async_registrer_tjenester(hass: HomeAssistant) -> None:
     reg(DOMAIN, "merk_betalt", _merk_betalt, SKJEMA_VALGFRI_PERIODE)
     reg(DOMAIN, "sett_malerstand", _sett_malerstand, SKJEMA_MALERSTAND)
     reg(DOMAIN, "send_regnskap", _send_regnskap, SKJEMA_VALGFRI_PERIODE)
+    reg(DOMAIN, "send_faktura", _send_faktura, SKJEMA_VALGFRI_PERIODE)

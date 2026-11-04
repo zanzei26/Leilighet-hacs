@@ -24,7 +24,14 @@ from .const import (
 )
 from .filnavn import REGNSKAPSNAVN, fakturanavn
 from .generering import sammendrag
-from .mail import SmtpFeil, bygg_epost, bygg_kopipost, bygg_lenkepost, send_epost
+from .mail import (
+    SmtpFeil,
+    bygg_epost,
+    bygg_fakturapost,
+    bygg_kopipost,
+    bygg_lenkepost,
+    send_epost,
+)
 from .varsler import ISSUE_EPOST
 
 _LOGGER = logging.getLogger(__name__)
@@ -47,8 +54,8 @@ class EpostMixin:
             )
         )
 
-    async def async_send_lenke(self) -> None:
-        """Sender en kort e-post til leietaker med lenken til leietakersiden."""
+    def _side_url_eller_feil(self) -> str:
+        """Lenken til leietakersiden, eller en forklarende valideringsfeil."""
         if not self.cfg.get(CONF_PUBLISER_SIDE):
             raise ServiceValidationError(
                 "Leietakersiden er slått av. Slå den på under Konfigurer → Leietakerside først."
@@ -59,6 +66,11 @@ class EpostMixin:
                 "Home Assistant kjenner ingen ekstern adresse å lage lenken av. "
                 "Slå på Nabu Casa eller sett ekstern URL, og prøv igjen."
             )
+        return url
+
+    async def async_send_lenke(self) -> None:
+        """Sender en kort e-post til leietaker med lenken til leietakersiden."""
+        url = self._side_url_eller_feil()
         melding = bygg_lenkepost(
             leietaker=self.leietaker,
             utleier=self.utleier,
@@ -72,6 +84,41 @@ class EpostMixin:
             raise HomeAssistantError(f"Lenken kunne ikke sendes ({err.kind}): {err}") from err
         await self.varsler.varsle(
             "Lenke sendt", f"Lenken til leietakersiden er sendt til {self.leietaker['epost']}."
+        )
+
+    async def async_send_faktura(self, periode_id: str | None = None) -> None:
+        """Sender leietaker lenken til siden og regningen for en periode som PDF-vedlegg."""
+        url = self._side_url_eller_feil()
+        naa = dt_util.now()
+        if periode_id is None:
+            synlige = self.synlige_perioder()
+            if not synlige:
+                raise ServiceValidationError("Det finnes ingen oppgjør å sende regning for ennå.")
+            periode_id = max(synlige, key=lambda p: p["id"])["id"]
+        p = self._hent_periode(periode_id)
+        if p["status"] == STATUS_VENTER:
+            raise ServiceValidationError(
+                f"Perioden {periode_id} venter på godkjenning og kan ikke sendes ennå."
+            )
+        pdf = await self.async_faktura_pdf(periode_id, naa)
+        if pdf is None:
+            raise ServiceValidationError(f"Regningen for {periode_id} finnes ikke.")
+        melding = bygg_fakturapost(
+            periode=p,
+            leietaker=self.leietaker,
+            utleier=self.utleier,
+            side_url=url,
+            vedlegg=[(fakturanavn(periode_id), "application/pdf", pdf)],
+            cc_utleier=bool(self.cfg.get(CONF_CC_UTLEIER, True)),
+        )
+        try:
+            await self._send_melding(melding)
+        except SmtpFeil as err:
+            _LOGGER.warning("Regningen %s kunne ikke sendes (%s): %s", periode_id, err.kind, err)
+            raise HomeAssistantError(f"Regningen kunne ikke sendes ({err.kind}): {err}") from err
+        await self.varsler.varsle(
+            "Faktura sendt",
+            f"Regningen for {periode_id} og lenken er sendt til {self.leietaker['epost']}.",
         )
 
     async def async_send_kopi(self, periode_id: str | None = None) -> None:
@@ -122,6 +169,25 @@ class EpostMixin:
                 f"Kopien av oppgjøret for {p['id']} kunne ikke sendes til deg: {err}",
             )
 
+    async def _regning_som_vedlegg(
+        self, p: dict[str, Any], naa: datetime
+    ) -> list[tuple[str, str, bytes]]:
+        """Regningen som PDF-vedlegg. Svikter byggingen, sendes oppgjøret uten (utleier varsles)."""
+        try:
+            pdf = await self.async_faktura_pdf(p["id"], naa)
+        except Exception:  # noqa: BLE001
+            _LOGGER.exception("Kunne ikke lage regningen for %s som vedlegg", p["id"])
+            pdf = None
+        if pdf is None:
+            await self.varsler.varsle_en_gang(
+                f"vedlegg_mangler:{p['id']}",
+                "Strømoppgjør: regningen mangler som vedlegg",
+                f"Oppgjør {p['id']} ble sendt uten regningen som PDF-vedlegg. Se loggen. "
+                "Send regningen til leietaker med handlingen send_faktura.",
+            )
+            return []
+        return [(fakturanavn(p["id"]), "application/pdf", pdf)]
+
     async def _send_epost(self, p: dict[str, Any], naa: datetime) -> SmtpFeil | None:
         """Sender oppgjøret. Returnerer None ved suksess, ellers feilen."""
         c = self.cfg
@@ -132,6 +198,7 @@ class EpostMixin:
             utleier=self.utleier,
             side_url=self.side_url,
             cc_utleier=bool(c.get(CONF_CC_UTLEIER, True)),
+            vedlegg=await self._regning_som_vedlegg(p, naa),
         )
         try:
             await self._send_melding(melding)
