@@ -79,8 +79,16 @@ class GenereringMixin:
         return p
 
     async def _generer(
-        self, periode_id: str, *, tving: bool, send_epost: bool, naa: datetime
+        self,
+        periode_id: str,
+        *,
+        tving: bool,
+        send_epost: bool,
+        naa: datetime,
+        reserve_fra: datetime | None = None,
     ) -> dict[str, Any]:
+        """Lager oppgjøret. Øyeblikksbildet brukes som reserve først fra `reserve_fra` (ingen
+        grense hvis None), slik at den automatiske kjøringen gir kilden tid til å rette seg."""
         self._sjekk_periodeformat(periode_id)
         if self.lager.finn(periode_id):
             raise ServiceValidationError(
@@ -105,6 +113,13 @@ class GenereringMixin:
         if not fullstendig(maned):
             bilde = self.lager.data["snapshots"].get(periode_id)
             if bilde and fullstendig(bilde.get("maned")):
+                if reserve_fra is not None and naa < reserve_fra:
+                    # Ikke lagre noe: kilden kan rulle over, og neste timekjøring prøver igjen.
+                    raise ManglerData(
+                        f"{self.cfg[CONF_ENT_REGNSKAP]} har ikke komplette tall for {periode_id} "
+                        "ennå. Reservetallene fra øyeblikksbildet brukes først fra "
+                        f"{reserve_fra:%d.%m.%Y kl. %H:%M}."
+                    )
                 maned, fra_bilde = bilde["maned"], bilde["tid"]
             else:
                 raise ManglerData(
