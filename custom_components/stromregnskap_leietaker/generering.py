@@ -23,7 +23,7 @@ from .calc import (
     velg_leilighet_kwh,
 )
 from .const import CONF_ENT_REGNSKAP, CONF_FORFALLSDAG
-from .kilder import fullstendig, til_float
+from .kilder import fullstendig, sperre, til_float
 from .maaler import LADER
 from .page import fmt_kwh, fmt_tall
 from .varsler import ISSUE_MANGLER, ISSUE_VENTER
@@ -97,6 +97,15 @@ class GenereringMixin:
             )
         maned = self.kilder.finn_maned(periode_id)
         fra_bilde: str | None = None
+        if sperret := sperre(maned):
+            # Ikke tving, ikke øyeblikksbilde: et bilde fra før grensen ble passert ser plausibelt
+            # ut, men er delvis og feil. Tallene må inn i regnskapssensoren (manuell overstyring).
+            raise ManglerData(
+                f"Regnskapssensoren {self.cfg[CONF_ENT_REGNSKAP]} har sperret {periode_id}: "
+                f"{sperret}. Oppgjøret lages ikke, og øyeblikksbildet brukes ikke, fordi tallene "
+                "ikke er til å stole på. Legg inn fakturaens tall i regnskapssensoren "
+                "(manuell overstyring), så lages oppgjøret ved neste timekjøring."
+            )
         forrige_id = forrige_maaned_id(periode_id)
         if (
             not tving

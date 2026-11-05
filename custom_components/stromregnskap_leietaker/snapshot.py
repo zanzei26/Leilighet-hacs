@@ -11,7 +11,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from .const import CONF_ENT_IMPORT, CONF_ENT_UTILITY
-from .kilder import KREVD_FRA_HUSET, fullstendig, til_float
+from .kilder import KREVD_FRA_HUSET, fullstendig, sperre, til_float
 
 BILDE_INTERVALL = timedelta(hours=6)
 BEHOLD_MANEDER = 6
@@ -24,9 +24,15 @@ class SnapshotMixin:
     async def _ta_bilde(self, naa: datetime) -> None:
         mnd = f"{naa.year}-{naa.month:02d}"
         denne = self.kilder.regnskap_attr().get("denne_maneden")
+        bilder = self.lager.data["snapshots"]
+        if sperre(denne) and denne.get("mnd") == mnd:
+            # Sperret måned: et bilde fra før grensen ble passert er delvis og må ikke kunne
+            # brukes som reserve senere.
+            if bilder.pop(mnd, None) is not None:
+                await self.lager.async_lagre()
+            return
         if not fullstendig(denne) or denne.get("mnd") != mnd:
             return  # bare tall for inneværende måned, og bare hele sett
-        bilder = self.lager.data["snapshots"]
         forrige = bilder.get(mnd)
         if forrige and naa - datetime.fromisoformat(forrige["tid"]) < BILDE_INTERVALL:
             return
