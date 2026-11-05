@@ -12,7 +12,7 @@ from homeassistant.util import dt as dt_util
 
 from .calc import periode_start_slutt
 from .const import CONF_ENT_IMPORT, CONF_ENT_LADER, CONF_ENT_REGNSKAP
-from .kilder import fullstendig
+from .kilder import fullstendig, sperre
 from .maaler import LADER, LIVE_VINDU
 from .varsler import ISSUE_DATAGRUNNLAG, ISSUE_ETTERSLEP
 
@@ -34,7 +34,12 @@ class DatagrunnlagMixin:
             problemer.append(f"Regnskapssensoren {c[CONF_ENT_REGNSKAP]} er utilgjengelig.")
         elif naa.day >= 2:
             denne = attr.get("denne_maneden")
-            if not fullstendig(denne) or denne.get("mnd") != mnd:
+            if (sperret := sperre(denne)) and denne.get("mnd") == mnd:
+                problemer.append(
+                    f"Regnskapssensoren {c[CONF_ENT_REGNSKAP]} har sperret inneværende måned "
+                    f"({mnd}): {sperret}. Oppgjøret lages ikke før fakturaens tall er lagt inn."
+                )
+            elif not fullstendig(denne) or denne.get("mnd") != mnd:
                 problemer.append(
                     f"Regnskapssensoren {c[CONF_ENT_REGNSKAP]} har ikke komplette tall for "
                     f"inneværende måned ({mnd})."
