@@ -7,6 +7,7 @@ from datetime import timedelta
 
 import pytest
 from homeassistant.exceptions import ServiceValidationError
+from homeassistant.util import dt as dt_util
 
 from custom_components.stromregnskap_leietaker.generering import ManglerData
 
@@ -16,6 +17,10 @@ SPERRE = "over 400 kWh – Norgespris-modellen gjelder ikke, legg inn nettokraft
 
 # Slik jarvis sperrer: snitt og leilighetens kr er tomme, og raden forklarer hvorfor.
 SPERRET_NOV = {**NOV_HUS, "snitt": None, "leilighet_kr": None, "sperre": SPERRE}
+
+# Slik raden ser ut når fakturaens nettokraft er lagt inn (manuell overstyring): fullstendig,
+# regnet fra fakturaen, og uten sperre.
+FAKTURA_NOV = {**NOV_HUS, "sperre": None, "nettokraft_kilde": "faktura"}
 
 # Et gammelt, fullstendig øyeblikksbilde fra før grensen ble passert (derfor «plausibelt»).
 BILDE_NOV = {
@@ -90,7 +95,7 @@ async def test_oppgjoeret_lages_av_seg_selv_naar_sperren_er_fjernet(hass, oppset
     assert o.lager.finn("2026-11") is None
 
     # jarvis har fått fakturaens tall: raden er fullstendig og uten sperre
-    sett_kilder(hass, maneder=[SEP_HUS, OKT_HUS, {**NOV_HUS, "sperre": None}])
+    sett_kilder(hass, maneder=[SEP_HUS, OKT_HUS, FAKTURA_NOV])
     o.freezer.tick(timedelta(hours=1))
     await o.coordinator.async_refresh()
     p = o.lager.finn("2026-11")
@@ -131,6 +136,51 @@ async def test_datagrunnlaget_forklarer_sperren_i_klartekst(hass, oppsett):
     o = oppsett
     sett_kilder(hass, denne={**DENNE_DES, "snitt": None, "leilighet_kr": None, "sperre": SPERRE})
     await o.coordinator.async_refresh()
-    problemer = o.coordinator.vurder_datagrunnlag(o.freezer())
+    problemer = o.coordinator.vurder_datagrunnlag(dt_util.now())
     assert any("sperret" in p and "over 400 kWh" in p for p in problemer)
     assert not any("ikke komplette tall" in p for p in problemer)  # én forklaring, ikke to
+
+
+# --- manuell overstyring fra fakturaen ------------------------------------------------------
+
+
+@pytest.mark.parametrize("sperre", [None, "", SPERRE])
+async def test_rad_regnet_fra_fakturaen_gir_normalt_oppgjoer_selv_om_sperreteksten_blir_staaende(
+    hass, oppsett, sperre
+):
+    o = oppsett
+    o.lager.data["snapshots"]["2026-11"] = BILDE_NOV
+    rad = {**NOV_HUS, "sperre": sperre, "nettokraft_kilde": "faktura"}
+    sett_kilder(hass, maneder=[SEP_HUS, OKT_HUS, rad])
+    await o.coordinator.async_refresh()
+    p = o.lager.finn("2026-11")
+    assert p is not None and p["snitt"] == 1.24 and p["status"] == "ikke_betalt"
+    assert "snapshot" not in p["kilde"] and o.epost.call_count == 1
+
+
+async def test_faktura_som_kilde_hjelper_ikke_naar_tallene_fortsatt_mangler(hass, oppsett):
+    o = oppsett
+    o.freezer.move_to("2026-12-06 08:00:00+01:00")
+    rad = {**SPERRET_NOV, "nettokraft_kilde": "faktura"}  # snitt er fortsatt tom
+    sett_kilder(hass, maneder=[SEP_HUS, OKT_HUS, rad])
+    o.lager.data["snapshots"]["2026-11"] = BILDE_NOV
+    await o.coordinator.async_refresh()
+    assert o.lager.finn("2026-11") is None and "over 400 kWh" in _meldinger(o)[-1]
+
+
+async def test_annen_nettokraftkilde_enn_faktura_loefter_ikke_sperren(hass, oppsett):
+    o = oppsett
+    rad = {**NOV_HUS, "sperre": SPERRE, "nettokraft_kilde": "modell"}
+    sett_kilder(hass, maneder=[SEP_HUS, OKT_HUS, rad])
+    await o.coordinator.async_refresh()
+    assert o.lager.finn("2026-11") is None and o.epost.call_count == 0
+
+
+async def test_inneværende_maaned_regnet_fra_fakturaen_er_ikke_sperret(hass, oppsett):
+    o = oppsett
+    denne = {**DENNE_DES, "sperre": SPERRE, "nettokraft_kilde": "faktura"}
+    sett_kilder(hass, denne=denne)
+    await o.coordinator.async_refresh()
+    assert o.lager.data["snapshots"]["2026-12"]["maned"]["kwh"] == 50.0  # bilde tas som vanlig
+    problemer = o.coordinator.vurder_datagrunnlag(dt_util.now())
+    assert not any("sperret" in p for p in problemer)

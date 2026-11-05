@@ -39,11 +39,15 @@ def sperre(maned: Any) -> str | None:
 
     Sperret betyr at tallene ikke er til å stole på (for eksempel over 5 000 kWh, der
     Norgespris-modellen ikke gjelder). Tomt felt (None, tom tekst, False) betyr ingen sperre.
+    Er raden fullstendig og regnet fra fakturaen (`nettokraft_kilde` er «faktura», manuell
+    overstyring), er den ikke sperret, selv om forklaringen står igjen.
     """
     if not isinstance(maned, dict):
         return None
     verdi = maned.get("sperre")
     if not verdi:
+        return None
+    if maned.get("nettokraft_kilde") == "faktura" and fullstendig(maned):
         return None
     tekst = verdi.strip() if isinstance(verdi, str) else "sperret av regnskapssensoren"
     return tekst or None
