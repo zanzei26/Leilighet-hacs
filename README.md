@@ -18,7 +18,7 @@ Custom integration for Home Assistant som regner ut leietakers månedlige strøm
 | `sensor.leilighet_strom_denne_maneden` | Leilighetens forbruk i løpende måned (utility_meter). `last_period` er forrige måneds sluttverdi. |
 | `sensor.minusmaler_leilighet_import` | Leilighetens målerstand i kWh (teller opp, nullstilles aldri). **Hovedkilden til forbruket.** |
 | `sensor.minusmaler_leilighet_effekt` | Øyeblikkseffekt (W), kun til visning. |
-| `sensor.mal_forbruk_prognose` | Attributtet `endring_prosent` brukes til månedsestimatet. |
+| `sensor.mal_forbruk_prognose` | Attributtet `endring_prosent` brukes til månedsestimatet de tre første døgnene, eller når måleren ikke har gitt forbruk hittil. |
 | `notify.notify` | Varslingstjeneste til utleier (en tjeneste, ikke en entitet). Dette er bare forslaget i skjemaet. Velg din egen. |
 
 ## Installasjon
@@ -60,7 +60,7 @@ Har leietaker en egen elbil-lader som **ikke** går gjennom leilighetens måler,
 - **Samme snittpris, egen linje.** Laderens kWh × husets snittpris regnes for seg og avrundes til hele øre. Beløpet leietaker skal betale er leilighetens beløp pluss laderens beløp (summen av de avrundede linjene, slik at fakturagrunnlaget går opp på papiret). Egne felt på perioden: `lader_kwh`, `lader_belop`, `leilighet_belop`, `lader_start`, `lader_slutt`. `leilighet_kwh` er fortsatt bare leiligheten.
 - **Vises der leietaker ser det.** Egen linje i fakturagrunnlaget (tellerstander, forbruk, utregning), egne kolonner i hele regnskapet, linjer i e-posten, og i historikken på siden. Har laderen 0 kWh i en måned, skjules den på siden og i e-posten (fakturagrunnlaget viser 0,0 kWh).
 - **Kontroller.** Teller som mangler eller går bakover (for eksempel ved lader-bytte), eller leilighet pluss lader over husets forbruk, gir `venter_godkjenning` med forklaring. Beløpet er da regnet uten lader, så du ser det før du godkjenner. Rett tellerne og lag perioden på nytt (slett, så generer). Endringsgrensen mot forrige måned gjelder bare leiligheten, siden lading kommer i rykk.
-- **Live.** `forbruk_hittil` og `kostnad_hittil` er leilighet pluss lader. Delene ligger som attributter (`leilighet_kwh_hittil`, `lader_kwh_hittil`, `lader_kostnad_hittil`), og siden viser «Herav elbil-lader». Månedsestimatet bygger på leilighetens forbruk og tar ikke med laderen.
+- **Live.** `forbruk_hittil` og `kostnad_hittil` er leilighet pluss lader. Delene ligger som attributter (`leilighet_kwh_hittil`, `lader_kwh_hittil`, `lader_kostnad_hittil`), og siden viser «Herav elbil-lader». Månedsestimatet bygger på leilighet pluss lader når det regnes fra takten. Regnes det fra forrige periode, er det bare leilighetens kWh.
 - **Ikke med tilbakevirkende kraft.** Perioder som er laget før laderen ble slått på, endres ikke.
 
 ## Datasikkerhet
@@ -106,9 +106,9 @@ Alle entitetene ligger på én enhet, «Leietaker».
 |---|---|
 | `sensor.leietaker_utestaende` | Sum ubetalt (kr). Attributter: antall perioder, lenke. |
 | `sensor.leietaker_siste_oppgjor` | Beløp siste periode (kr). Attributter: alle feltene i perioden. |
-| `sensor.leietaker_forbruk_hittil` | kWh denne måneden. Attributter: snittpris og kostnad hittil, estimat, `endring_prosent`, effekt (W), rå målerstand. |
+| `sensor.leietaker_forbruk_hittil` | kWh denne måneden. Attributter: snittpris og kostnad hittil, estimat og `estimat_metode`, `endring_prosent`, effekt (W), rå målerstand. |
 | `sensor.leietaker_kostnad_hittil` | Kostnad hittil (kr). |
-| `sensor.leietaker_estimat_maned` | Månedsestimat (kr). Attributt: kWh. |
+| `sensor.leietaker_estimat_maned` | Månedsestimat (kr). Attributter: kWh og `estimat_metode` (`takt`, `forrige_periode` eller `ingen`). |
 | `sensor.leietaker_side_sist_publisert` | Tidsstempel. Attributt: lenke. |
 | `sensor.leietaker_lenke` | Leietakerlenken, slik at du kan se og kopiere den. Ukjent hvis siden ikke publiseres. Attributter: lenker til regnskapet og siste fakturagrunnlag (PDF). |
 | `binary_sensor.leietaker_oppgjor_venter_godkjenning` | `on` når en periode venter på godkjenning. |
@@ -117,7 +117,7 @@ Alle entitetene ligger på én enhet, «Leietaker».
 | `button.leietaker_merk_som_betalt` | Merker alle utestående oppgjør som betalt. |
 | `button.leietaker_send_regnskap` | Sender deg en e-post med fakturagrunnlag, regnskap (PDF) og JSON-sikkerhetskopi. |
 
-Estimatet er forrige periodes leilighets-kWh × (1 + `endring_prosent`/100), priset til forrige periodes snittpris. «Hittil»-tall fra regnskapssensoren brukes bare når den faktisk viser inneværende måned.
+Estimatet bygger fra og med 72 timer (3 døgn) ut i måneden på leilighetens egen takt: forbruk hittil fra måleren ÷ medgått tid × månedens lengde, regnet i timer fra lokal midnatt den 1. (klokkeskifte og 28–31 dager blir riktig). De tre første døgnene, og når målerstanden ved månedsskiftet mangler, er det forrige periodes leilighets-kWh × (1 + `endring_prosent`/100). Prisen er i begge tilfeller forrige periodes snittpris. Uten forrige periode vises ikke noe estimat. Metoden står i attributtet `estimat_metode` på `forbruk_hittil` og `estimat_maned`. «Hittil»-tall fra regnskapssensoren brukes bare når den faktisk viser inneværende måned.
 
 > **Installerte du 0.1.0?** Da kan entity-ID-ene dine ha fått «leietaker» to ganger (for eksempel `sensor.stromregnskap_leietaker_leietaker_utestaende`). Det er rettet i 0.1.1, men eksisterende entiteter beholder navnet sitt. Fjern integrasjonen og legg den til på nytt, eller gi entitetene nytt navn i Home Assistant.
 

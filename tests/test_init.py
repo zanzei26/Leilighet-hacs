@@ -48,8 +48,12 @@ async def test_oppsett_importerer_historikk_og_lager_entiteter(
     assert hass.states.get("sensor.leietaker_siste_oppgjor").attributes["leilighet_kwh"] == 234.0
     assert hass.states.get("sensor.leietaker_forbruk_hittil").state == "30.3"
     assert hass.states.get("sensor.leietaker_kostnad_hittil").state == "45.45"
-    assert hass.states.get("sensor.leietaker_estimat_maned").state == "371.18"
-    assert hass.states.get("sensor.leietaker_estimat_maned").attributes["estimat_kwh"] == 285.48
+    estimat = hass.states.get("sensor.leietaker_estimat_maned")
+    assert estimat.state == "124.41"  # takt: 30,3 kWh etter 228 av 720 timer
+    assert estimat.attributes["estimat_kwh"] == 95.68
+    assert estimat.attributes["estimat_metode"] == "takt"
+    hittil = hass.states.get("sensor.leietaker_forbruk_hittil")
+    assert hittil.attributes["estimat_metode"] == "takt"
     assert hass.states.get("binary_sensor.leietaker_oppgjor_venter_godkjenning").state == "off"
     side = hass.states.get("sensor.leietaker_side_sist_publisert")
     assert side.state.startswith("2026-11-10T11:00:00")  # UTC

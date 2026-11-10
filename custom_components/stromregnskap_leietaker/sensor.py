@@ -84,6 +84,7 @@ SENSORER: tuple[StromSensorBeskrivelse, ...] = (
             "kostnad_hittil": d["kostnad_hittil"],
             "estimat_kwh": _rund(d["estimat_kwh"]),
             "estimat_kr": d["estimat_kr"],
+            "estimat_metode": d["estimat_metode"],
             "endring_prosent": d["endring_prosent"],
             "effekt_w": d["effekt_w"],
             "maaler_total_kwh": d["import_kwh"],
@@ -108,7 +109,10 @@ SENSORER: tuple[StromSensorBeskrivelse, ...] = (
         native_unit_of_measurement=KRONER,
         suggested_display_precision=0,
         verdi=lambda d: d["estimat_kr"],
-        attributter=lambda d: {"estimat_kwh": _rund(d["estimat_kwh"])},
+        attributter=lambda d: {
+            "estimat_kwh": _rund(d["estimat_kwh"]),
+            "estimat_metode": d["estimat_metode"],
+        },
     ),
     StromSensorBeskrivelse(
         key="side_sist_publisert",

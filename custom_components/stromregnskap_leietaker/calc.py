@@ -7,7 +7,7 @@ Beløp regnes med Decimal og avrundes med «halvt øre opp» (ikke bankers round
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
@@ -293,6 +293,62 @@ def estimat_maned(
     """Månedsestimat: forrige måneds kWh × (1 + endring/100), priset til forrige snittpris."""
     kwh = float(_dec(forrige_kwh) * (1 + _dec(endring_prosent) / 100))
     return kwh, beregn_belop(kwh, forrige_snitt)
+
+
+# Månedsanslaget (bare visning). Metoden står i attributtet «estimat_metode».
+ESTIMAT_TAKT = "takt"
+ESTIMAT_FORRIGE = "forrige_periode"
+ESTIMAT_INGEN = "ingen"
+TAKT_FRA_TIMER = 72  # de tre første døgnene er takten for ustabil, da brukes forrige periode
+
+
+def maned_timer(naa: datetime) -> tuple[float, float]:
+    """Medgått tid av måneden og månedens lengde, begge i timer.
+
+    Regnes fra lokal midnatt den 1. i ``naa`` sin tidssone til ``naa`` og til lokal midnatt den
+    1. neste måned. Tidene gjøres om til UTC før de trekkes fra, slik at klokkeskiftet blir med
+    (oktober har 745 timer og mars 743 timer i Norge).
+    """
+    if naa.tzinfo is None:
+        raise ValueError("naa må ha tidssone")
+    sone = naa.tzinfo
+    start = datetime(naa.year, naa.month, 1, tzinfo=sone)
+    aar, mnd = (naa.year + 1, 1) if naa.month == 12 else (naa.year, naa.month + 1)
+    neste = datetime(aar, mnd, 1, tzinfo=sone)
+    t0, t1, n = (start.astimezone(UTC), neste.astimezone(UTC), naa.astimezone(UTC))
+    return (n - t0).total_seconds() / 3600, (t1 - t0).total_seconds() / 3600
+
+
+def estimat_takt(kwh_hittil: float, medgatt_timer: float, maned_timer: float) -> float:
+    """Leilighetens egen takt: kWh hittil ÷ medgått tid × månedens lengde."""
+    return float(_dec(kwh_hittil) * _dec(maned_timer) / _dec(medgatt_timer))
+
+
+def velg_estimat(
+    naa: datetime,
+    kwh_hittil: float | None,
+    forrige_kwh: float | None,
+    forrige_snitt: float | None,
+    endring_prosent: float | None,
+) -> tuple[float | None, float | None, str]:
+    """Månedsanslaget: (kWh, kr, metode).
+
+    - ``takt``: fra og med 72 timer (3 døgn) ut i måneden, når ``kwh_hittil`` fra måleren finnes.
+    - ``forrige_periode``: ellers forrige periodes kWh × (1 + endring/100).
+    - ``ingen``: uten forrige periode (eller uten endring når takten ikke kan brukes).
+    Prisen er alltid forrige periodes snitt. Uten forrige periode vises derfor ikke noe anslag.
+    """
+    if forrige_snitt is None:
+        return None, None, ESTIMAT_INGEN
+    if kwh_hittil is not None:
+        medgatt, lengde = maned_timer(naa)
+        if medgatt >= TAKT_FRA_TIMER:
+            kwh = estimat_takt(kwh_hittil, medgatt, lengde)
+            return kwh, beregn_belop(kwh, forrige_snitt), ESTIMAT_TAKT
+    if forrige_kwh is not None and endring_prosent is not None:
+        kwh, kr = estimat_maned(forrige_kwh, endring_prosent, forrige_snitt)
+        return kwh, kr, ESTIMAT_FORRIGE
+    return None, None, ESTIMAT_INGEN
 
 
 def forrige_periode(perioder: list[dict[str, Any]], periode_id: str) -> dict[str, Any] | None:

@@ -1,23 +1,30 @@
 """Tester for den rene beregningsmodulen (ingen HA-avhengigheter)."""
 
 from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 import pytest
 
 from custom_components.stromregnskap_leietaker.calc import (
+    ESTIMAT_FORRIGE,
+    ESTIMAT_INGEN,
+    ESTIMAT_TAKT,
     Grenser,
     MaalerForbruk,
     auto_status,
     beregn_belop,
     beregn_oppgjor,
     estimat_maned,
+    estimat_takt,
     forfall_for_periode,
     forrige_periode,
     forrige_periode_id,
     maaler_forbruk,
+    maned_timer,
     periode_start_slutt,
     sjekk_rimelighet,
     utestaaende,
+    velg_estimat,
     velg_leilighet_kwh,
 )
 
@@ -249,6 +256,84 @@ def test_estimat_er_forrige_kwh_ganger_endring_priset_til_forrige_snitt():
 def test_estimat_med_negativ_endring():
     kwh, _ = estimat_maned(forrige_kwh=200.0, endring_prosent=-10, forrige_snitt=1.0)
     assert kwh == pytest.approx(180.0)
+
+
+# --- månedsanslag fra leilighetens egen takt ----------------------------------------------------
+
+OSLO_TZ = ZoneInfo("Europe/Oslo")
+
+
+def _t(*args):
+    return datetime(*args, tzinfo=OSLO_TZ)
+
+
+def test_takt_midt_i_en_maaned_paa_30_dogn():
+    medgatt, lengde = maned_timer(_t(2026, 11, 16, 0))
+    assert (medgatt, lengde) == (360.0, 720.0)
+    assert estimat_takt(120.0, medgatt, lengde) == pytest.approx(240.0)
+
+
+def test_takt_midt_i_en_maaned_paa_31_dogn():
+    medgatt, lengde = maned_timer(_t(2027, 1, 11, 12))
+    assert (medgatt, lengde) == (252.0, 744.0)
+    assert estimat_takt(84.0, medgatt, lengde) == pytest.approx(248.0)
+
+
+def test_takt_i_oktober_med_klokkeskifte_har_745_timer():
+    # Sommertid slutter siste søndag i oktober: én time mer
+    medgatt, lengde = maned_timer(_t(2026, 10, 31, 12))
+    assert lengde == 745.0
+    assert medgatt == 733.0  # 30,5 døgn + timen ved klokkeskiftet
+    assert estimat_takt(146.6, medgatt, lengde) == pytest.approx(149.0)
+
+
+def test_takt_i_mars_med_klokkeskifte_har_743_timer():
+    # Sommertid starter siste søndag i mars: én time mindre
+    medgatt, lengde = maned_timer(_t(2027, 3, 31, 12))
+    assert lengde == 743.0
+    assert medgatt == 731.0
+    assert estimat_takt(73.1, medgatt, lengde) == pytest.approx(74.3)
+
+
+def test_takt_med_ujevne_tall_gir_omtrent_309_kwh():
+    # 87,5 kWh etter 8,5 døgn (204 t) i en måned på 30 døgn (720 t). Oppdiktede tall.
+    assert estimat_takt(87.5, 8.5 * 24, 30 * 24) == pytest.approx(308.8, abs=0.1)
+
+
+def test_maned_timer_krever_tidssone():
+    with pytest.raises(ValueError):
+        maned_timer(datetime(2026, 11, 10, 12))
+
+
+def test_anslag_rett_for_tre_dogn_bruker_forrige_periode():
+    kwh, kr, metode = velg_estimat(_t(2026, 11, 3, 23, 59), 30.0, 200.0, 1.0, 10)
+    assert metode == ESTIMAT_FORRIGE
+    assert kwh == pytest.approx(220.0) and kr == 220.0
+
+
+def test_anslag_ved_tre_dogn_bruker_takten():
+    kwh, kr, metode = velg_estimat(_t(2026, 11, 4, 0), 30.0, 200.0, 1.0, 10)
+    assert metode == ESTIMAT_TAKT
+    assert kwh == pytest.approx(300.0)  # 30 kWh på 72 av 720 timer
+    assert kr == 300.0  # priset til forrige periodes snitt
+
+
+def test_anslag_uten_hittil_bruker_forrige_periode():
+    _, _, metode = velg_estimat(_t(2026, 11, 20, 12), None, 200.0, 1.0, 10)
+    assert metode == ESTIMAT_FORRIGE
+
+
+def test_anslag_uten_forrige_periode_gir_ingen_anslag():
+    assert velg_estimat(_t(2026, 11, 20, 12), 50.0, None, None, 10) == (None, None, ESTIMAT_INGEN)
+
+
+def test_anslag_tidlig_uten_endring_gir_ingen_anslag():
+    assert velg_estimat(_t(2026, 11, 2, 12), 5.0, 200.0, 1.0, None) == (None, None, ESTIMAT_INGEN)
+
+
+def test_anslag_midt_i_maaneden_trenger_ikke_endring():
+    kwh, _, metode = velg_estimat(_t(2026, 11, 16, 0), 120.0, 200.0, 1.0, None)
+    assert metode == ESTIMAT_TAKT and kwh == pytest.approx(240.0)
 
 
 # --- forrige periode ------------------------------------------------------------

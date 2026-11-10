@@ -11,9 +11,9 @@ from homeassistant.core import HomeAssistant
 from .calc import (
     STATUS_VENTER,
     UTESTAAENDE_STATUSER,
-    estimat_maned,
     forrige_periode,
     utestaaende,
+    velg_estimat,
 )
 from .const import (
     CONF_ENT_EFFEKT,
@@ -111,9 +111,13 @@ def bygg_data(
     i_maneden = isinstance(denne, dict) and denne.get("mnd") == denne_id
     endring = kilder.prognose_endring()
     forrige = forrige_periode(perioder, denne_id)
-    estimat_kwh = estimat_kr = None
-    if forrige is not None and endring is not None:
-        estimat_kwh, estimat_kr = estimat_maned(forrige["leilighet_kwh"], endring, forrige["snitt"])
+    forrige_kwh = forrige["leilighet_kwh"] if forrige is not None else None
+    forrige_snitt = forrige["snitt"] if forrige is not None else None
+    # Uten målerforbruk hittil: forrige periode × husets endring. Koordinatoren regner på nytt
+    # med takten når måleren har gitt «hittil» (se StromregnskapCoordinator._sett_estimat).
+    estimat_kwh, estimat_kr, estimat_metode = velg_estimat(
+        naa, None, forrige_kwh, forrige_snitt, endring
+    )
 
     return {
         "naa": naa,
@@ -128,6 +132,9 @@ def bygg_data(
         "endring_prosent": endring,
         "estimat_kwh": estimat_kwh,
         "estimat_kr": estimat_kr,
+        "estimat_metode": estimat_metode,
+        "forrige_kwh": forrige_kwh,
+        "forrige_snitt": forrige_snitt,
         "effekt_w": kilder.float_tilstand(cfg[CONF_ENT_EFFEKT]),
         "import_kwh": kilder.float_tilstand(cfg[CONF_ENT_IMPORT]),
         "side_url": side_url,

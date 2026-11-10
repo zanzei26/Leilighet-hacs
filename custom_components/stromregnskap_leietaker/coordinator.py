@@ -23,6 +23,7 @@ from .calc import (
     beregn_belop,
     forrige_periode_id,
     maaler_forbruk,
+    velg_estimat,
 )
 from .const import (
     CONF_ADRESSE,
@@ -259,6 +260,7 @@ class StromregnskapCoordinator(
         else:
             data["hittil_kilde"] = "utility_meter"  # reserve: utility_meter og regnskapssensoren
         self._legg_til_lader_hittil(data, naa)
+        self._sett_estimat(data, naa)
         data["datagrunnlag"] = self.vurder_datagrunnlag(naa)
         data["siste_bilde"] = (self.lager.data["snapshots"].get(mnd) or {}).get("tid")
         data["siste_sikkerhetskopi"] = self.lager.siste_kopi
@@ -293,6 +295,26 @@ class StromregnskapCoordinator(
             data["lader_kostnad_hittil"] = kr
             if data["kostnad_hittil"] is not None:
                 data["kostnad_hittil"] = avrund(data["kostnad_hittil"] + kr, 2)
+
+    def _sett_estimat(self, data: dict[str, Any], naa: datetime) -> None:
+        """Månedsanslaget (bare visning): leilighetens egen takt når måleren har gitt «hittil».
+
+        Takten bygger på ``kwh_hittil`` (leilighet pluss lader), men bare når forbruket kommer
+        fra måleren (målerstand ved månedsskiftet finnes) og laderen, hvis den er på, også har en
+        stand. Ellers brukes forrige periode × husets endring, som ``bygg_data`` alt har regnet.
+        """
+        if data.get("hittil_kilde") != "maaler":
+            return
+        if self.lader_aktiv and data["lader_kwh_hittil"] is None:
+            return
+        kwh, kr, metode = velg_estimat(
+            naa,
+            data["kwh_hittil"],
+            data["forrige_kwh"],
+            data["forrige_snitt"],
+            data["endring_prosent"],
+        )
+        data["estimat_kwh"], data["estimat_kr"], data["estimat_metode"] = kwh, kr, metode
 
     def _side_ctx(self, naa: datetime, data: dict[str, Any]) -> dict[str, Any]:
         hittil = None
