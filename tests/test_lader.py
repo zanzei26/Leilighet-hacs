@@ -319,6 +319,26 @@ async def test_hittil_er_leilighet_pluss_lader(hass, med_lader):
     assert d["kostnad_hittil"] == 61.2  # 40,80 + 20,40
 
 
+async def test_anslaget_bygger_paa_leilighet_pluss_lader(hass, med_lader):
+    o = med_lader
+    o.freezer.move_to("2026-12-10 12:00:00+01:00")  # 228 av 744 timer
+    hass.states.async_set(IMPORT, "262.04", {})  # 12,0 kWh
+    hass.states.async_set(LADER, "3101.04", {})  # 6,0 kWh
+    await o.coordinator.async_refresh()
+    d = o.coordinator.data
+    assert d["estimat_metode"] == "takt"
+    assert d["estimat_kwh"] == pytest.approx(18.0 * 744 / 228)
+
+
+async def test_anslaget_uten_laderens_teller_bruker_forrige_periode(hass, med_lader):
+    o = med_lader
+    o.freezer.move_to("2026-12-10 12:00:00+01:00")
+    hass.states.async_set(IMPORT, "262.04", {})
+    hass.states.async_set(LADER, "unavailable", {})
+    await o.coordinator.async_refresh()
+    assert o.coordinator.data["estimat_metode"] == "forrige_periode"
+
+
 async def test_hittil_uten_laderens_teller_viser_bare_leiligheten(hass, med_lader):
     o = med_lader
     hass.states.async_set(IMPORT, "262.04", {})

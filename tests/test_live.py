@@ -99,11 +99,13 @@ async def test_live_oppdatering_utsetter_ikke_den_timelige_kjoringen(hass, integ
 async def test_endring_i_prognosen_og_regnskapssensoren_gir_ogsaa_live_oppdatering(
     hass, integrasjon
 ):
-    estimat = "sensor.leietaker_estimat_maned"
-    for_ = hass.states.get(estimat).state
+    # Midt i måneden bygger anslaget på takten, så endringen sees i attributtet.
+    hittil = "sensor.leietaker_forbruk_hittil"
+    for_ = hass.states.get(hittil).attributes["endring_prosent"]
     hass.states.async_set("sensor.mal_forbruk_prognose", "3000", {"endring_prosent": 40})
     await hass.async_block_till_done()
-    assert hass.states.get(estimat).state != for_
+    na = hass.states.get(hittil).attributes["endring_prosent"]
+    assert na == 40 and na != for_
 
 
 async def test_ingen_lytter_igjen_etter_nedlasting(hass, integrasjon):

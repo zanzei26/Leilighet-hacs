@@ -372,8 +372,10 @@ async def test_data_for_sensorer_med_hittil_og_estimat(hass, oppsett):
     assert d["siste"]["id"] == "2026-10"
     assert d["kwh_hittil"] == 30.3  # fra måleren (30,25 avrundes først)
     assert d["snitt_hittil"] == 1.5 and d["kostnad_hittil"] == 45.45  # 30,3 × 1,5
-    assert d["estimat_kwh"] == pytest.approx(285.48)  # 234,0 × 1,22
-    assert d["estimat_kr"] == 371.18  # × forrige snittpris 1,3002
+    # 9,5 døgn (228 t) ut i november (720 t): leilighetens egen takt, 30,3 × 720 / 228
+    assert d["estimat_metode"] == "takt"
+    assert d["estimat_kwh"] == pytest.approx(95.68, abs=0.01)
+    assert d["estimat_kr"] == 124.41  # × forrige snittpris 1,3002
     assert d["effekt_w"] == 850.0
     assert d["import_kwh"] == 30.25
     assert d["side_url"] == "https://eksempel.ui.nabu.casa/local/testslug123/index.html"
@@ -389,13 +391,44 @@ async def test_hittil_fra_forrige_maned_vises_ikke_som_denne_maneden(hass, oppse
     assert o.coordinator.data["kostnad_hittil"] is None
 
 
-async def test_estimat_mangler_uten_prognose(hass, oppsett):
+async def test_uten_prognose_brukes_takten_midt_i_maaneden(hass, oppsett):
     o = oppsett
     o.freezer.move_to("2026-11-20 12:00:00+01:00")
     hass.states.async_set("sensor.mal_forbruk_prognose", "unavailable", {})
     await o.coordinator.async_refresh()
+    assert o.coordinator.data["estimat_metode"] == "takt"
+    assert o.coordinator.data["estimat_kwh"] is not None
+
+
+async def test_estimat_mangler_uten_prognose_de_tre_forste_dognene(hass, oppsett):
+    o = oppsett
+    o.freezer.move_to("2026-11-02 12:00:00+01:00")  # 36 t: takten brukes ikke ennå
+    hass.states.async_set("sensor.mal_forbruk_prognose", "unavailable", {})
+    await o.coordinator.async_refresh()
+    assert o.coordinator.data["estimat_metode"] == "ingen"
     assert o.coordinator.data["estimat_kwh"] is None
     assert o.coordinator.data["estimat_kr"] is None
+
+
+async def test_forrige_periode_de_tre_forste_dognene(hass, oppsett):
+    o = oppsett
+    o.freezer.move_to("2026-11-02 12:00:00+01:00")
+    await o.coordinator.async_refresh()
+    d = o.coordinator.data
+    assert d["estimat_metode"] == "forrige_periode"
+    assert d["estimat_kwh"] == pytest.approx(285.48)  # 234,0 × 1,22
+    assert d["estimat_kr"] == 371.18  # × forrige snittpris 1,3002
+
+
+async def test_uten_maalerstand_ved_maanedsskiftet_brukes_forrige_periode(hass, oppsett):
+    o = oppsett
+    o.freezer.move_to("2026-11-20 12:00:00+01:00")
+    o.lager.data["maalerstander"].pop("2026-11-01", None)
+    await o.coordinator.async_refresh()
+    d = o.coordinator.data
+    assert d["hittil_kilde"] == "utility_meter"
+    assert d["estimat_metode"] == "forrige_periode"
+    assert d["estimat_kwh"] == pytest.approx(285.48)
 
 
 async def test_siden_skrives_hver_time_med_hittil_tall(hass, oppsett):
