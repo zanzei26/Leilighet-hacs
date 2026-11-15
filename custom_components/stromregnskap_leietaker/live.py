@@ -43,6 +43,8 @@ class LiveMixin:
             CONF_ENT_EFFEKT,
         )
         entiteter = {c[k] for k in nokler if c.get(k)}
+        if prognose := self.kilder.kostnadsprognose_entitet():
+            entiteter.add(prognose)  # prisen i månedsanslaget følger husets prognose
         if self.lader_aktiv:
             entiteter.add(c[CONF_ENT_LADER])
         return sorted(entiteter)

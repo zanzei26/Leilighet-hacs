@@ -109,6 +109,21 @@ summary { cursor:pointer; font-weight:600; }
 """
 
 
+def _prisforklaring(est: dict[str, Any]) -> str:
+    """Hvilken pris anslaget bruker: husets forventede snittpris, eller forrige måneds snittpris."""
+    if est.get("pris") is None:
+        return ""
+    pris = f"{fmt_tall(est['pris'], 4)} kr/kWh"
+    if est.get("pris_kilde") == "husets_prognose":
+        tekst = (
+            f"Prisen i anslaget er husets forventede snittpris for måneden, {pris} "
+            "(husets forventede kostnad delt på forventet forbruk)."
+        )
+    else:
+        tekst = f"Prisen i anslaget er forrige måneds snittpris, {pris}."
+    return f'\n  <p class="liten">{tekst}</p>'
+
+
 def _hittil(ctx: dict[str, Any]) -> str:
     h = ctx.get("hittil")
     if h and h.get("kwh") is not None:
@@ -130,6 +145,7 @@ def _hittil(ctx: dict[str, Any]) -> str:
             f"<p>Anslått for hele måneden: <strong>ca. {fmt_tall(est['kwh'], 0)} kWh / "
             f"ca. {fmt_tall(est['kr'], 0)} kr</strong></p>"
         )
+        estimat += _prisforklaring(est)
     else:
         estimat = ""
     return f"""

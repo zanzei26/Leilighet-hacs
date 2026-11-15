@@ -307,14 +307,19 @@ class StromregnskapCoordinator(
             return
         if self.lader_aktiv and data["lader_kwh_hittil"] is None:
             return
-        kwh, kr, metode = velg_estimat(
+        prognose_kr, prognose_kwh = self.kilder.kostnadsprognose()
+        e = velg_estimat(
             naa,
             data["kwh_hittil"],
             data["forrige_kwh"],
             data["forrige_snitt"],
             data["endring_prosent"],
+            prognose_kr=prognose_kr,
+            prognose_kwh=prognose_kwh,
+            grenser=self.grenser,
         )
-        data["estimat_kwh"], data["estimat_kr"], data["estimat_metode"] = kwh, kr, metode
+        data["estimat_kwh"], data["estimat_kr"], data["estimat_metode"] = e.kwh, e.kr, e.metode
+        data["estimat_pris"], data["estimat_pris_kilde"] = e.pris, e.pris_kilde
 
     def _side_ctx(self, naa: datetime, data: dict[str, Any]) -> dict[str, Any]:
         hittil = None
@@ -328,7 +333,12 @@ class StromregnskapCoordinator(
             }
         estimat = None
         if data["estimat_kwh"] is not None:
-            estimat = {"kwh": data["estimat_kwh"], "kr": data["estimat_kr"]}
+            estimat = {
+                "kwh": data["estimat_kwh"],
+                "kr": data["estimat_kr"],
+                "pris": data["estimat_pris"],
+                "pris_kilde": data["estimat_pris_kilde"],
+            }
         return {
             "leietaker": self.leietaker,
             "utleier": self.utleier,

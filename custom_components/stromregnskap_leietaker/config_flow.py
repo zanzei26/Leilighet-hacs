@@ -14,6 +14,7 @@ from homeassistant.helpers.selector import (
 )
 
 from .const import (
+    CONF_ENT_KOSTNADSPROGNOSE,
     CONF_IMPORTER_HISTORIKK,
     CONF_SEND_TEST,
     CONF_SLUG,
@@ -102,7 +103,8 @@ class StromregnskapConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             feil = valider_kilder(self.hass, user_input)
             if not feil:
-                self._data |= normaliser(user_input)
+                # et tomt valgfritt felt kommer ikke med i skjemaet: det betyr «av», ikke «standard»
+                self._data |= {CONF_ENT_KOSTNADSPROGNOSE: ""} | normaliser(user_input)
                 return await self.async_step_epost()
         return self.async_show_form(
             step_id="kilder", data_schema=schema_kilder(user_input or self._data), errors=feil
@@ -221,7 +223,8 @@ class StromregnskapOptionsFlow(OptionsFlow):
         if user_input is not None:
             feil = valider_kilder(self.hass, user_input)
             if not feil:
-                return self._lagre(normaliser(user_input))
+                # et tomt valgfritt felt kommer ikke med i skjemaet: det betyr «av», ikke «behold»
+                return self._lagre({CONF_ENT_KOSTNADSPROGNOSE: ""} | normaliser(user_input))
         return self.async_show_form(
             step_id="kilder",
             data_schema=schema_kilder(user_input or dict(self.config_entry.data)),
