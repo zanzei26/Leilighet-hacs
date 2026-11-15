@@ -18,9 +18,11 @@ from .calc import (
 from .const import (
     CONF_ENT_EFFEKT,
     CONF_ENT_IMPORT,
+    CONF_ENT_KOSTNADSPROGNOSE,
     CONF_ENT_PROGNOSE,
     CONF_ENT_REGNSKAP,
     CONF_ENT_UTILITY,
+    DEFAULT_ENT_KOSTNADSPROGNOSE,
 )
 
 
@@ -92,6 +94,20 @@ class Kilder:
         stat = self._hass.states.get(self._cfg()[CONF_ENT_PROGNOSE])
         return None if stat is None else til_float(stat.attributes.get("endring_prosent"))
 
+    def kostnadsprognose_entitet(self) -> str | None:
+        """Entiteten med husets kostnadsprognose. Ikke satt i oppsettet gir standardsensoren, og
+        et tomt felt (tømt av utleier) betyr at den ikke brukes."""
+        return self._cfg().get(CONF_ENT_KOSTNADSPROGNOSE, DEFAULT_ENT_KOSTNADSPROGNOSE) or None
+
+    def kostnadsprognose(self) -> tuple[float | None, float | None]:
+        """Husets forventede kostnad (kr, tilstanden) og forbruk (kWh, attributtet «kwh_prognose»)
+        for hele måneden. Begge None når sensoren ikke finnes eller ikke har tall."""
+        entitet = self.kostnadsprognose_entitet()
+        stat = self._hass.states.get(entitet) if entitet else None
+        if stat is None:
+            return None, None
+        return til_float(stat.state), til_float(stat.attributes.get("kwh_prognose"))
+
 
 def bygg_data(
     kilder: Kilder,
@@ -115,9 +131,7 @@ def bygg_data(
     forrige_snitt = forrige["snitt"] if forrige is not None else None
     # Uten målerforbruk hittil: forrige periode × husets endring. Koordinatoren regner på nytt
     # med takten når måleren har gitt «hittil» (se StromregnskapCoordinator._sett_estimat).
-    estimat_kwh, estimat_kr, estimat_metode = velg_estimat(
-        naa, None, forrige_kwh, forrige_snitt, endring
-    )
+    estimat = velg_estimat(naa, None, forrige_kwh, forrige_snitt, endring)
 
     return {
         "naa": naa,
@@ -130,9 +144,11 @@ def bygg_data(
         "snitt_hittil": til_float(denne.get("snitt")) if i_maneden else None,
         "kostnad_hittil": til_float(denne.get("leilighet_kr")) if i_maneden else None,
         "endring_prosent": endring,
-        "estimat_kwh": estimat_kwh,
-        "estimat_kr": estimat_kr,
-        "estimat_metode": estimat_metode,
+        "estimat_kwh": estimat.kwh,
+        "estimat_kr": estimat.kr,
+        "estimat_metode": estimat.metode,
+        "estimat_pris": estimat.pris,
+        "estimat_pris_kilde": estimat.pris_kilde,
         "forrige_kwh": forrige_kwh,
         "forrige_snitt": forrige_snitt,
         "effekt_w": kilder.float_tilstand(cfg[CONF_ENT_EFFEKT]),

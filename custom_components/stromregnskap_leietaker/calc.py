@@ -9,7 +9,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from decimal import ROUND_HALF_UP, Decimal
-from typing import Any
+from typing import Any, NamedTuple
 
 STATUS_IKKE_BETALT = "ikke_betalt"
 STATUS_BETALT = "betalt"
@@ -301,6 +301,21 @@ ESTIMAT_FORRIGE = "forrige_periode"
 ESTIMAT_INGEN = "ingen"
 TAKT_FRA_TIMER = 72  # de tre første døgnene er takten for ustabil, da brukes forrige periode
 
+# Prisen i anslaget: husets forventede snittpris for måneden (prognosekostnad ÷ prognose-kWh) når
+# den finnes og er troverdig, ellers forrige periodes snitt. Står i «estimat_pris_kilde».
+ESTIMAT_PRIS_PROGNOSE = "husets_prognose"
+ESTIMAT_PRIS_FORRIGE = "forrige_periode"
+
+
+class Estimat(NamedTuple):
+    """Månedsanslaget (bare visning). De tre første feltene er kWh, kr og metode."""
+
+    kwh: float | None
+    kr: float | None
+    metode: str
+    pris: float | None = None
+    pris_kilde: str | None = None
+
 
 def maned_timer(naa: datetime) -> tuple[float, float]:
     """Medgått tid av måneden og månedens lengde, begge i timer.
@@ -324,31 +339,58 @@ def estimat_takt(kwh_hittil: float, medgatt_timer: float, maned_timer: float) ->
     return float(_dec(kwh_hittil) * _dec(maned_timer) / _dec(medgatt_timer))
 
 
+def prognosepris(
+    prognose_kr: float | None, prognose_kwh: float | None, grenser: Grenser | None
+) -> float | None:
+    """Husets forventede snittpris for måneden: prognosekostnad ÷ prognose-kWh (fire desimaler).
+
+    Bare når begge er tall over null og prisen ligger innenfor grensene for snittpris (hvis de
+    er oppgitt). Ellers None, og anslaget bruker forrige periodes snitt.
+    """
+    if prognose_kr is None or prognose_kwh is None or prognose_kr <= 0 or prognose_kwh <= 0:
+        return None
+    pris = avrund(_dec(prognose_kr) / _dec(prognose_kwh), 4)
+    if grenser is not None and not grenser.snitt_min <= pris <= grenser.snitt_maks:
+        return None
+    return pris
+
+
 def velg_estimat(
     naa: datetime,
     kwh_hittil: float | None,
     forrige_kwh: float | None,
     forrige_snitt: float | None,
     endring_prosent: float | None,
-) -> tuple[float | None, float | None, str]:
-    """Månedsanslaget: (kWh, kr, metode).
+    *,
+    prognose_kr: float | None = None,
+    prognose_kwh: float | None = None,
+    grenser: Grenser | None = None,
+) -> Estimat:
+    """Månedsanslaget: kWh, kr, metode, og prisen med kilde.
 
     - ``takt``: fra og med 72 timer (3 døgn) ut i måneden, når ``kwh_hittil`` fra måleren finnes.
-    - ``forrige_periode``: ellers forrige periodes kWh × (1 + endring/100).
+      Prisen er husets forventede snittpris (``prognose_kr`` ÷ ``prognose_kwh``) når den finnes og
+      er innenfor ``grenser``, ellers forrige periodes snitt.
+    - ``forrige_periode``: ellers forrige periodes kWh × (1 + endring/100), til forrige snitt.
     - ``ingen``: uten forrige periode (eller uten endring når takten ikke kan brukes).
-    Prisen er alltid forrige periodes snitt. Uten forrige periode vises derfor ikke noe anslag.
+    Uten forrige periode vises ikke noe anslag. Oppgjøret bruker aldri dette.
     """
     if forrige_snitt is None:
-        return None, None, ESTIMAT_INGEN
+        return Estimat(None, None, ESTIMAT_INGEN)
     if kwh_hittil is not None:
         medgatt, lengde = maned_timer(naa)
         if medgatt >= TAKT_FRA_TIMER:
             kwh = estimat_takt(kwh_hittil, medgatt, lengde)
-            return kwh, beregn_belop(kwh, forrige_snitt), ESTIMAT_TAKT
+            pris = prognosepris(prognose_kr, prognose_kwh, grenser)
+            if pris is not None:
+                kilde = ESTIMAT_PRIS_PROGNOSE
+            else:
+                pris, kilde = forrige_snitt, ESTIMAT_PRIS_FORRIGE
+            return Estimat(kwh, beregn_belop(kwh, pris), ESTIMAT_TAKT, pris, kilde)
     if forrige_kwh is not None and endring_prosent is not None:
         kwh, kr = estimat_maned(forrige_kwh, endring_prosent, forrige_snitt)
-        return kwh, kr, ESTIMAT_FORRIGE
-    return None, None, ESTIMAT_INGEN
+        return Estimat(kwh, kr, ESTIMAT_FORRIGE, forrige_snitt, ESTIMAT_PRIS_FORRIGE)
+    return Estimat(None, None, ESTIMAT_INGEN)
 
 
 def forrige_periode(perioder: list[dict[str, Any]], periode_id: str) -> dict[str, Any] | None:

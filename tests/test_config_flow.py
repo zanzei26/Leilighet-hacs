@@ -270,6 +270,38 @@ async def test_valgflyt_side_lagrer_telefon_og_kan_tomme_den_igjen(hass, smtp):
     assert entry.data["utleier_telefon"] == ""  # tomt felt betyr «fjern», ikke «behold»
 
 
+async def test_valgflyt_kilder_lagrer_kostnadsprognosen_og_tomt_felt_skrur_den_av(hass, smtp):
+    entry = await _entry(hass)
+    flyt = hass.config_entries.options
+
+    r = await flyt.async_init(entry.entry_id)
+    r = await flyt.async_configure(r["flow_id"], {"next_step_id": "kilder"})
+    r = await flyt.async_configure(
+        r["flow_id"], {**STEG_KILDER, "ent_kostnadsprognose": "sensor.min_prognose"}
+    )
+    assert entry.data["ent_kostnadsprognose"] == "sensor.min_prognose"
+
+    r = await flyt.async_init(entry.entry_id)
+    r = await flyt.async_configure(r["flow_id"], {"next_step_id": "kilder"})
+    r = await flyt.async_configure(r["flow_id"], dict(STEG_KILDER))  # feltet tømt
+    assert entry.data["ent_kostnadsprognose"] == ""  # tomt betyr «av», ikke «behold»
+
+
+def _foreslaatt(skjema, nokkel):
+    marker = next(k for k in skjema.schema if str(k) == nokkel)
+    return (marker.description or {}).get("suggested_value")
+
+
+def test_kostnadsprognosen_foreslaar_standardsensoren_til_den_er_tømt():
+    from custom_components.stromregnskap_leietaker.flow_skjema import schema_kilder
+
+    standard = "sensor.jarvis_stromkostnad_prognose"
+    assert _foreslaatt(schema_kilder({}), "ent_kostnadsprognose") == standard
+    assert _foreslaatt(schema_kilder({"ent_kostnadsprognose": ""}), "ent_kostnadsprognose") is None
+    egen = {"ent_kostnadsprognose": "sensor.min_prognose"}
+    assert _foreslaatt(schema_kilder(egen), "ent_kostnadsprognose") == "sensor.min_prognose"
+
+
 async def test_oppsett_uten_telefon_lagrer_ingen_telefon(hass, smtp):
     entry = await _entry(hass)
     assert not entry.data.get("utleier_telefon")

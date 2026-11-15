@@ -27,6 +27,7 @@ from .const import (
     CONF_ENDRING_MAKS,
     CONF_ENT_EFFEKT,
     CONF_ENT_IMPORT,
+    CONF_ENT_KOSTNADSPROGNOSE,
     CONF_ENT_LADER,
     CONF_ENT_PROGNOSE,
     CONF_ENT_REGNSKAP,
@@ -57,6 +58,7 @@ from .const import (
     DEFAULT_ENDRING_MAKS,
     DEFAULT_ENT_EFFEKT,
     DEFAULT_ENT_IMPORT,
+    DEFAULT_ENT_KOSTNADSPROGNOSE,
     DEFAULT_ENT_PROGNOSE,
     DEFAULT_ENT_REGNSKAP,
     DEFAULT_ENT_UTILITY,
@@ -115,6 +117,14 @@ def schema_leietaker(d: dict[str, Any], *, bare_leietaker: bool = False) -> vol.
 
 
 def schema_kilder(d: dict[str, Any]) -> vol.Schema:
+    # Valgfri. Ikke satt tidligere gir standardsensoren som forslag. Et tomt felt (tømt av
+    # utleier) lagres som «» og betyr at prognosen ikke brukes.
+    kostnadsprognose = d.get(CONF_ENT_KOSTNADSPROGNOSE, DEFAULT_ENT_KOSTNADSPROGNOSE)
+    kostnadsprognose_nokkel = (
+        vol.Optional(CONF_ENT_KOSTNADSPROGNOSE, description={"suggested_value": kostnadsprognose})
+        if kostnadsprognose
+        else vol.Optional(CONF_ENT_KOSTNADSPROGNOSE)
+    )
     lader_nokkel = (
         vol.Optional(CONF_ENT_LADER, description={"suggested_value": d[CONF_ENT_LADER]})
         if d.get(CONF_ENT_LADER)
@@ -141,6 +151,7 @@ def schema_kilder(d: dict[str, Any]) -> vol.Schema:
             vol.Required(
                 CONF_ENT_PROGNOSE, default=d.get(CONF_ENT_PROGNOSE, DEFAULT_ENT_PROGNOSE)
             ): _sensor(),
+            kostnadsprognose_nokkel: _sensor(),
             vol.Required(
                 CONF_VARSEL_TJENESTE, default=d.get(CONF_VARSEL_TJENESTE, DEFAULT_VARSEL_TJENESTE)
             ): _tekst(),

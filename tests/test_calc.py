@@ -306,33 +306,35 @@ def test_maned_timer_krever_tidssone():
 
 
 def test_anslag_rett_for_tre_dogn_bruker_forrige_periode():
-    kwh, kr, metode = velg_estimat(_t(2026, 11, 3, 23, 59), 30.0, 200.0, 1.0, 10)
+    kwh, kr, metode, *_ = velg_estimat(_t(2026, 11, 3, 23, 59), 30.0, 200.0, 1.0, 10)
     assert metode == ESTIMAT_FORRIGE
     assert kwh == pytest.approx(220.0) and kr == 220.0
 
 
 def test_anslag_ved_tre_dogn_bruker_takten():
-    kwh, kr, metode = velg_estimat(_t(2026, 11, 4, 0), 30.0, 200.0, 1.0, 10)
+    kwh, kr, metode, *_ = velg_estimat(_t(2026, 11, 4, 0), 30.0, 200.0, 1.0, 10)
     assert metode == ESTIMAT_TAKT
     assert kwh == pytest.approx(300.0)  # 30 kWh på 72 av 720 timer
     assert kr == 300.0  # priset til forrige periodes snitt
 
 
 def test_anslag_uten_hittil_bruker_forrige_periode():
-    _, _, metode = velg_estimat(_t(2026, 11, 20, 12), None, 200.0, 1.0, 10)
+    _, _, metode, *_ = velg_estimat(_t(2026, 11, 20, 12), None, 200.0, 1.0, 10)
     assert metode == ESTIMAT_FORRIGE
 
 
 def test_anslag_uten_forrige_periode_gir_ingen_anslag():
-    assert velg_estimat(_t(2026, 11, 20, 12), 50.0, None, None, 10) == (None, None, ESTIMAT_INGEN)
+    e = velg_estimat(_t(2026, 11, 20, 12), 50.0, None, None, 10)
+    assert e[:3] == (None, None, ESTIMAT_INGEN)
 
 
 def test_anslag_tidlig_uten_endring_gir_ingen_anslag():
-    assert velg_estimat(_t(2026, 11, 2, 12), 5.0, 200.0, 1.0, None) == (None, None, ESTIMAT_INGEN)
+    e = velg_estimat(_t(2026, 11, 2, 12), 5.0, 200.0, 1.0, None)
+    assert e[:3] == (None, None, ESTIMAT_INGEN)
 
 
 def test_anslag_midt_i_maaneden_trenger_ikke_endring():
-    kwh, _, metode = velg_estimat(_t(2026, 11, 16, 0), 120.0, 200.0, 1.0, None)
+    kwh, _, metode, *_ = velg_estimat(_t(2026, 11, 16, 0), 120.0, 200.0, 1.0, None)
     assert metode == ESTIMAT_TAKT and kwh == pytest.approx(240.0)
 
 

@@ -23,6 +23,7 @@ CONF_LADER_AKTIV = "lader_aktiv"
 CONF_ENT_LADER = "ent_lader"
 CONF_ENT_EFFEKT = "ent_effekt"
 CONF_ENT_PROGNOSE = "ent_prognose"
+CONF_ENT_KOSTNADSPROGNOSE = "ent_kostnadsprognose"
 CONF_VARSEL_TJENESTE = "varsel_tjeneste"
 
 CONF_SMTP_HOST = "smtp_host"
@@ -52,6 +53,7 @@ DEFAULT_ENT_IMPORT = "sensor.minusmaler_leilighet_import"
 DEFAULT_MAALER_START_STAND = 0.0
 DEFAULT_ENT_EFFEKT = "sensor.minusmaler_leilighet_effekt"
 DEFAULT_ENT_PROGNOSE = "sensor.mal_forbruk_prognose"
+DEFAULT_ENT_KOSTNADSPROGNOSE = "sensor.jarvis_stromkostnad_prognose"
 DEFAULT_VARSEL_TJENESTE = "notify.notify"
 
 DEFAULT_SMTP_HOST = "smtp.gmail.com"

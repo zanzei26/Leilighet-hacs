@@ -19,6 +19,7 @@ Custom integration for Home Assistant som regner ut leietakers månedlige strøm
 | `sensor.minusmaler_leilighet_import` | Leilighetens målerstand i kWh (teller opp, nullstilles aldri). **Hovedkilden til forbruket.** |
 | `sensor.minusmaler_leilighet_effekt` | Øyeblikkseffekt (W), kun til visning. |
 | `sensor.mal_forbruk_prognose` | Attributtet `endring_prosent` brukes til månedsestimatet de tre første døgnene, eller når måleren ikke har gitt forbruk hittil. |
+| `sensor.jarvis_stromkostnad_prognose` | **Valgfri.** Husets forventede kostnad for hele måneden (kr), med attributtet `kwh_prognose` (forventet forbruk i kWh). Brukes bare til **prisen** i månedsanslaget: kostnad ÷ kWh. Tøm feltet i oppsettet for ikke å bruke den. |
 | `notify.notify` | Varslingstjeneste til utleier (en tjeneste, ikke en entitet). Dette er bare forslaget i skjemaet. Velg din egen. |
 
 ## Installasjon
@@ -106,9 +107,9 @@ Alle entitetene ligger på én enhet, «Leietaker».
 |---|---|
 | `sensor.leietaker_utestaende` | Sum ubetalt (kr). Attributter: antall perioder, lenke. |
 | `sensor.leietaker_siste_oppgjor` | Beløp siste periode (kr). Attributter: alle feltene i perioden. |
-| `sensor.leietaker_forbruk_hittil` | kWh denne måneden. Attributter: snittpris og kostnad hittil, estimat og `estimat_metode`, `endring_prosent`, effekt (W), rå målerstand. |
+| `sensor.leietaker_forbruk_hittil` | kWh denne måneden. Attributter: snittpris og kostnad hittil, estimat, `estimat_metode`, `estimat_pris` og `estimat_pris_kilde`, `endring_prosent`, effekt (W), rå målerstand. |
 | `sensor.leietaker_kostnad_hittil` | Kostnad hittil (kr). |
-| `sensor.leietaker_estimat_maned` | Månedsestimat (kr). Attributter: kWh og `estimat_metode` (`takt`, `forrige_periode` eller `ingen`). |
+| `sensor.leietaker_estimat_maned` | Månedsestimat (kr). Attributter: kWh, `estimat_metode` (`takt`, `forrige_periode` eller `ingen`), `estimat_pris` (kr/kWh) og `estimat_pris_kilde` (`husets_prognose` eller `forrige_periode`). |
 | `sensor.leietaker_side_sist_publisert` | Tidsstempel. Attributt: lenke. |
 | `sensor.leietaker_lenke` | Leietakerlenken, slik at du kan se og kopiere den. Ukjent hvis siden ikke publiseres. Attributter: lenker til regnskapet og siste fakturagrunnlag (PDF). |
 | `binary_sensor.leietaker_oppgjor_venter_godkjenning` | `on` når en periode venter på godkjenning. |
@@ -117,7 +118,7 @@ Alle entitetene ligger på én enhet, «Leietaker».
 | `button.leietaker_merk_som_betalt` | Merker alle utestående oppgjør som betalt. |
 | `button.leietaker_send_regnskap` | Sender deg en e-post med fakturagrunnlag, regnskap (PDF) og JSON-sikkerhetskopi. |
 
-Estimatet bygger fra og med 72 timer (3 døgn) ut i måneden på leilighetens egen takt: forbruk hittil fra måleren ÷ medgått tid × månedens lengde, regnet i timer fra lokal midnatt den 1. (klokkeskifte og 28–31 dager blir riktig). De tre første døgnene, og når målerstanden ved månedsskiftet mangler, er det forrige periodes leilighets-kWh × (1 + `endring_prosent`/100). Prisen er i begge tilfeller forrige periodes snittpris. Uten forrige periode vises ikke noe estimat. Metoden står i attributtet `estimat_metode` på `forbruk_hittil` og `estimat_maned`. «Hittil»-tall fra regnskapssensoren brukes bare når den faktisk viser inneværende måned.
+Estimatet bygger fra og med 72 timer (3 døgn) ut i måneden på leilighetens egen takt: forbruk hittil fra måleren ÷ medgått tid × månedens lengde, regnet i timer fra lokal midnatt den 1. (klokkeskifte og 28–31 dager blir riktig). De tre første døgnene, og når målerstanden ved månedsskiftet mangler, er det forrige periodes leilighets-kWh × (1 + `endring_prosent`/100). **Prisen** i anslaget er husets forventede snittpris for måneden (husets kostnadsprognose ÷ forventet kWh, fire desimaler) når begge er tall over null og prisen ligger innenfor grensene for snittpris i oppsettet. Ellers, og de tre første døgnene, er prisen forrige periodes snittpris. Prisen og kilden står i attributtene `estimat_pris` og `estimat_pris_kilde`, og siden forklarer hvilken pris som er brukt. Snitt hittil i måneden brukes ikke, siden det tidlig i måneden er kunstig høyt (de faste leddene fordeles på få kWh). Oppgjøret den 3. bruker alltid faktisk snitt for avsluttet måned og påvirkes ikke av prognosen. Uten forrige periode vises ikke noe estimat. Metoden står i attributtet `estimat_metode` på `forbruk_hittil` og `estimat_maned`. «Hittil»-tall fra regnskapssensoren brukes bare når den faktisk viser inneværende måned.
 
 > **Installerte du 0.1.0?** Da kan entity-ID-ene dine ha fått «leietaker» to ganger (for eksempel `sensor.stromregnskap_leietaker_leietaker_utestaende`). Det er rettet i 0.1.1, men eksisterende entiteter beholder navnet sitt. Fjern integrasjonen og legg den til på nytt, eller gi entitetene nytt navn i Home Assistant.
 
